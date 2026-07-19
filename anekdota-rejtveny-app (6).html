@@ -1,0 +1,1815 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Anekdota-rejtvény készítő</title>
+<style>
+  :root {
+    --paper: #FFF8EC;
+    --paper-dark: #FFE8C7;
+    --ink: #2B3A55;
+    --ink-soft: #5E6E8C;
+    --accent: #FF6B4A;
+    --accent-soft: #FFE3D6;
+    --gold: #17A398;
+    --line: #F0C28A;
+    --good: #2FA84F;
+    --bad: #E14545;
+    --card: #FFFFFF;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 16px;
+    line-height: 1.5;
+  }
+  header {
+    background: var(--ink);
+    color: var(--paper);
+    padding: 28px 20px 22px;
+    text-align: center;
+    border-bottom: 6px double var(--gold);
+  }
+  header h1 {
+    margin: 0 0 6px;
+    font-family: Georgia, serif;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    font-size: clamp(24px, 4vw, 34px);
+  }
+  header p {
+    margin: 0;
+    color: var(--accent-soft);
+    font-style: italic;
+    font-size: 14px;
+  }
+  main {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 28px 20px 80px;
+  }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 22px;
+    margin-bottom: 24px;
+    box-shadow: 0 2px 0 var(--line);
+  }
+  .card h2 {
+    margin-top: 0;
+    font-size: 19px;
+    color: var(--accent);
+    border-bottom: 2px solid var(--accent-soft);
+    padding-bottom: 8px;
+  }
+  label {
+    display: block;
+    font-weight: 700;
+    margin: 14px 0 6px;
+    font-size: 14px;
+    color: var(--ink-soft);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  textarea, select, input[type=text] {
+    width: 100%;
+    font-family: Georgia, serif;
+    font-size: 16px;
+    padding: 10px 12px;
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    background: var(--paper);
+    color: var(--ink);
+  }
+  textarea { min-height: 70px; resize: vertical; }
+  .btn {
+    display: inline-block;
+    background: var(--accent);
+    color: var(--paper);
+    border: none;
+    padding: 11px 22px;
+    font-family: Georgia, serif;
+    font-size: 15px;
+    font-weight: 700;
+    border-radius: 3px;
+    cursor: pointer;
+    margin-top: 16px;
+    margin-right: 10px;
+    letter-spacing: 0.02em;
+  }
+  .btn:hover { background: #E85535; }
+  .btn.secondary {
+    background: transparent;
+    color: var(--accent);
+    border: 1.5px solid var(--accent);
+  }
+  .btn.secondary:hover { background: var(--accent-soft); }
+  .btn.gold { background: var(--gold); }
+  .btn.gold:hover { background: #128077; }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .status {
+    margin-top: 14px;
+    font-size: 14px;
+    color: var(--ink-soft);
+  }
+  .status.error { color: var(--bad); font-weight: 700; }
+  .status.ok { color: var(--good); font-weight: 700; }
+
+  .toggle-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 18px;
+    flex-wrap: wrap;
+  }
+  .toggle-row .btn.active { background: var(--ink); color: var(--paper); }
+
+  #puzzleArea { display: none; }
+
+  .grid-wrap {
+    overflow-x: auto;
+    padding: 10px 0 20px;
+  }
+  .xgrid {
+    display: inline-grid;
+    gap: 2px;
+    background: var(--line);
+    border: 2px solid var(--ink);
+    padding: 2px;
+  }
+  .cell {
+    width: 42px;
+    height: 42px;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+    background: var(--card);
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .cell.empty { background: var(--ink); }
+  .cell.letter input {
+    width: 100%;
+    height: 100%;
+    border: none;
+    background: transparent;
+    text-align: center;
+    font-family: Georgia, serif;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--ink);
+    text-transform: uppercase;
+  }
+  .cell.letter input:focus { outline: 2px solid var(--gold); background: #FFF3D0; }
+  .cell.letter.solution { background: var(--accent-soft); }
+  .cell.letter.solution input { color: var(--ink); font-weight: 700; }
+  .cell.letter .badge {
+    position: absolute;
+    top: 1px;
+    left: 2px;
+    font-size: 9px;
+    font-weight: 700;
+    color: var(--ink);
+  }
+  .cell.letter.correct input { color: var(--good); }
+  .cell.letter.correct { box-shadow: inset 0 0 0 2px var(--good); }
+  .cell.letter.incorrect { box-shadow: inset 0 0 0 2px var(--bad); }
+  .cell.clue {
+    background: var(--paper-dark);
+    font-size: 7px;
+    line-height: 1.1;
+    text-align: left;
+    padding: 2px 3px;
+    color: var(--ink-soft);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 1px;
+    min-width: 0;
+    min-height: 0;
+  }
+  .cell.clue .cl {
+    display: flex;
+    gap: 2px;
+    min-width: 0;
+    overflow: hidden;
+  }
+  .cell.clue .arrow { color: var(--accent); font-weight: 700; flex-shrink: 0; }
+  .cell.clue .cl span:last-child {
+    min-width: 0;
+    overflow: hidden;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    hyphens: auto;
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical;
+  }
+
+  .solution-box {
+    background: var(--ink);
+    color: var(--paper);
+    padding: 16px 20px;
+    border-radius: 4px;
+    margin-top: 16px;
+    font-size: 18px;
+    letter-spacing: 0.08em;
+    text-align: center;
+    font-weight: 700;
+  }
+  .solution-box.success { background: var(--good); }
+
+  .submit-form {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 10px;
+  }
+  @media (max-width: 600px) { .submit-form { grid-template-columns: 1fr; } }
+
+  .note {
+    font-size: 13px;
+    color: var(--ink-soft);
+    background: var(--paper-dark);
+    border-left: 3px solid var(--gold);
+    padding: 10px 14px;
+    margin-top: 14px;
+  }
+
+  .anecdote-box {
+    background: var(--paper-dark);
+    border-left: 4px solid var(--accent);
+    padding: 14px 18px;
+    margin-top: 18px;
+    font-style: italic;
+    font-size: 15px;
+    color: var(--ink);
+  }
+  .anecdote-box .label {
+    display: block;
+    font-style: normal;
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    color: var(--accent);
+    margin-bottom: 6px;
+  }
+  .caricature-card { margin-top: 18px; }
+  .caricature-wrap {
+    position: relative;
+    background: var(--paper-dark);
+    border: 2px dashed var(--line);
+    border-radius: 4px;
+    min-height: 220px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+  .caricature-placeholder {
+    color: var(--ink-soft);
+    font-style: italic;
+    font-size: 14px;
+    padding: 24px;
+    text-align: center;
+  }
+  .caricature-wrap img { max-width: 100%; max-height: 420px; display: block; }
+  .caricature-controls {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-top: 10px;
+  }
+  .corner-btns { display: flex; gap: 4px; margin-left: auto; }
+  .corner-btn {
+    padding: 7px 10px;
+    font-size: 12px;
+    border: 1px solid var(--line);
+    background: var(--card);
+    border-radius: 3px;
+    cursor: pointer;
+    color: var(--ink-soft);
+    font-family: Georgia, serif;
+  }
+  .corner-btn.active { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+  .bubble {
+    position: absolute;
+    width: 46%;
+    min-height: 70px;
+    max-height: 150px;
+    background: var(--card);
+    border: 2px solid var(--ink);
+    border-radius: 10px;
+    padding: 6px 8px;
+    box-sizing: border-box;
+  }
+  .bubble textarea {
+    width: 100%; height: 100%; min-height: 56px;
+    border: none; background: transparent; resize: none;
+    font-family: Georgia, serif; font-size: 13px; color: var(--ink);
+  }
+  .bubble.corner-tl { top: 10px; left: 10px; }
+  .bubble.corner-tr { top: 10px; right: 10px; }
+  .bubble.corner-bl { bottom: 10px; left: 10px; }
+  .bubble.corner-br { bottom: 10px; right: 10px; }
+  .bubble::after {
+    content: ''; position: absolute; width: 0; height: 0; border: 9px solid transparent;
+  }
+  .bubble.corner-tl::after { bottom: -16px; left: 20px; border-top-color: var(--ink); border-bottom: 0; }
+  .bubble.corner-tr::after { bottom: -16px; right: 20px; border-top-color: var(--ink); border-bottom: 0; }
+  .bubble.corner-bl::after { top: -16px; left: 20px; border-bottom-color: var(--ink); border-top: 0; }
+  .bubble.corner-br::after { top: -16px; right: 20px; border-bottom-color: var(--ink); border-top: 0; }
+
+  @media print {
+    header, .no-print { display: none !important; }
+    body { background: white; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .card { box-shadow: none; border: none; }
+    .xgrid { border: 2px solid black; }
+  }
+  .print-only { display: none; }
+  body.printing-student .interactive-only { display: none; }
+  body.printing-teacher .interactive-only { display: none; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Anekdota-rejtvény készítő</h1>
+  <p>Skandináv típusú keresztrejtvény történelmi anekdotákhoz — 1001 Történet</p>
+</header>
+
+<main>
+
+  <div class="card no-print" id="setupCard">
+    <h2>1. Add meg az anekdotát</h2>
+    <label for="anecdoteInput">Anekdota szövege (ez jelenik meg a feladatlapon, olvasmányként)</label>
+    <textarea id="anecdoteInput" style="min-height: 110px;">Amikor Széchenyi István 1825-ben felajánlotta egyévi jövedelmét egy magyar tudós társaság megalapítására, a pozsonyi országgyűlésen sokan meglepődtek bőkezűségén — a felajánlás híre gyorsan végigfutott az egész országon, és sokakat saját adományra buzdított.</textarea>
+
+    <label for="sentenceInput">Megoldás-mondat (ez lesz a rejtvény megfejtése — lehet az anekdota rövid összefoglalása vagy egy kulcsmondata)</label>
+    <textarea id="sentenceInput">Éljen a haza</textarea>
+
+    <label for="eraSelect">Korszak / témakör</label>
+    <select id="eraSelect"></select>
+
+    <div class="status" id="statusLine"></div>
+    <button class="btn" id="generateBtn">Rejtvény generálása</button>
+  </div>
+
+  <div id="puzzleArea">
+
+    <div class="card no-print">
+      <h2>2. Nézet</h2>
+      <div class="toggle-row">
+        <button class="btn active" id="viewInteractiveBtn">Kitöltős nézet</button>
+        <button class="btn secondary" id="viewPrintBtn">Nyomtatási nézet</button>
+      </div>
+
+      <div id="interactiveControls">
+        <button class="btn gold" id="checkBtn">Ellenőrzés</button>
+        <button class="btn secondary" id="resetBtn">Kitöltés törlése</button>
+      </div>
+
+      <div id="printControls" style="display:none;">
+        <button class="btn" id="printStudentBtn">Nyomtatás — üres feladatlap</button>
+        <button class="btn secondary" id="printTeacherBtn">Nyomtatás — megoldókulcs</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Rejtvény</h2>
+      <div class="grid-wrap">
+        <div class="xgrid" id="gridEl"></div>
+      </div>
+      <div class="solution-box" id="solutionBox">Megfejtés: —</div>
+      <div class="anecdote-box" id="anecdoteBox"></div>
+      <div class="caricature-card">
+        <div class="caricature-wrap" id="caricatureWrap">
+          <span class="caricature-placeholder" id="caricaturePlaceholder">Nincs feltöltött kép — kattints a "Kép feltöltése" gombra.</span>
+          <img id="caricatureImg" style="display:none;" alt="Karikatúra">
+          <div class="bubble corner-tr" id="bubble" style="display:none;">
+            <textarea id="bubbleText" placeholder="Ide írhatja a diák a saját szövegét…"></textarea>
+          </div>
+        </div>
+        <div class="caricature-controls no-print">
+          <input type="file" id="caricatureUpload" accept="image/*" style="display:none;">
+          <button class="btn secondary" id="uploadImgBtn" type="button">Kép feltöltése</button>
+          <button class="btn secondary" id="removeImgBtn" type="button">Kép törlése</button>
+          <div class="corner-btns">
+            <button class="corner-btn" data-corner="tl" type="button">Bal fent</button>
+            <button class="corner-btn active" data-corner="tr" type="button">Jobb fent</button>
+            <button class="corner-btn" data-corner="bl" type="button">Bal lent</button>
+            <button class="corner-btn" data-corner="br" type="button">Jobb lent</button>
+          </div>
+        </div>
+        <div class="no-print" style="margin-top:10px;">
+          <label for="bubbleSuggested">Javasolt válasz (csak a tanári nyomtatáshoz, opcionális)</label>
+          <input type="text" id="bubbleSuggested" placeholder="Pl. mit mondhatott a szereplő…">
+        </div>
+      </div>
+    </div>
+
+    <div class="card no-print interactive-only" id="submitCard">
+      <h2>3. Mentés és beküldés</h2>
+      <div class="submit-form">
+        <div>
+          <label for="studentName">Diák neve</label>
+          <input type="text" id="studentName" placeholder="Kovács Anna">
+        </div>
+        <div>
+          <label for="studentClass">Osztály</label>
+          <input type="text" id="studentClass" placeholder="10.B">
+        </div>
+      </div>
+      <label for="teacherEmail">Tanár e-mail címe</label>
+      <input type="text" id="teacherEmail" value="tanarno@pelda.hu">
+      <div class="note">Ha a "Beküldés" gombra kattintva nem nyílik meg a levelezőprogramod, használd a "Letöltés" gombot, és küldd el a fájlt csatolmányként.</div>
+      <button class="btn" id="submitBtn">Beküldés e-mailben</button>
+      <button class="btn secondary" id="downloadBtn">Letöltés fájlba</button>
+    </div>
+
+  </div>
+
+</main>
+
+<script>
+// ============================================================
+// 1) ADATOK — bővíthető szólisták
+// ============================================================
+const GENERAL_WORDS = [
+  ['ALMA','Gyümölcs'],
+  ['VIRÁG','Illatos kerti növény'],
+  ['ERDŐ','Fákkal borított terület'],
+  ['HÁZ','Lakóépület'],
+  ['KUTYA','"Ember legjobb barátja"'],
+  ['MACSKA','Dorombolós házi kedvenc'],
+  ['ASZTAL','Bútor, amin étkezünk'],
+  ['ABLAK','Nyílászáró a falban'],
+  ['KÖNYV','Lapokból álló olvasmány'],
+  ['ISKOLA','Tanulás helyszíne'],
+  ['TANÁR','Iskolában tanító személy'],
+  ['DIÁK','Iskolában tanuló személy'],
+  ['TOLL','Íróeszköz'],
+  ['NAP','Az ég ragyogó csillaga'],
+  ['HOLD','A Föld kísérője'],
+  ['VÍZ','Élet alapanyaga'],
+  ['KENYÉR','Alapélelmiszer'],
+  ['KERT','Ház körüli zöld terület'],
+  ['UTCA','Közlekedő út házak közt'],
+  ['VÁROS','Nagyobb település'],
+  ['FALU','Vidéki település'],
+  ['NÉP','Ország lakossága'],
+  ['KIRÁLY','Koronás uralkodó'],
+  ['VÁR','Erődített épület'],
+  ['TEMPLOM','Vallási épület'],
+  ['HARANG','Templomi hangadó eszköz'],
+  ['ZÁSZLÓ','Ország jelképe, lobogó'],
+  ['KARD','Régi idők fegyvere'],
+  ['LÓ','Patás háziállat'],
+  ['HÍD','Két partot összekötő építmény'],
+  ['FOLYÓ','Tengerbe ömlő víz'],
+  ['HEGY','Magas földfelszíni forma'],
+  ['TÓ','Állóvíz'],
+  ['TENGER','Nagy kiterjedésű sós víz'],
+  ['MADÁR','Repülni tudó állat'],
+  ['HAL','Vízben élő állat'],
+  ['FARKAS','Erdei ragadozó'],
+  ['RÓKA','Ravasz erdei állat'],
+  ['MEDVE','Nagytestű erdei ragadozó'],
+  ['SAS','Ragadozó madár'],
+  ['ZENE','Hangokból álló művészet'],
+  ['ÉJSZAKA','A nap sötét szaka'],
+  ['JÉG','Fagyott víz'],
+  ['JÁTÉK','Gyerekek időtöltése'],
+  ['ÉV','365 napos időszak'],
+  ['ÚT','Közlekedésre szolgáló nyomvonal'],
+  ['ÁG','Fa kinövése'],
+  ['TŰ','Varráshoz használt hegyes eszköz'],
+  ['ÖV','Derékra kötött ruhadarab'],
+  ['ING','Felsőtest fedő ruhadarab'],
+  ['ÉG','Felettünk húzódó kékség'],
+  ['ORR','Arcon lévő szaglószerv'],
+  ['FÜL','Halláshoz szükséges testrész'],
+  ['SZEM','Látáshoz szükséges testrész'],
+  ['SZÁJ','Beszédre és evésre szolgáló testrész'],
+  ['KÉZ','Fogásra használt testrész'],
+  ['LÁB','Járásra szolgáló testrész'],
+  ['FEJ','A test felső, legfontosabb része'],
+  ['HAJ','A fejet borító szálas képződmény'],
+  ['SZÍV','Vért pumpáló szerv'],
+  ['VÉR','Az erekben keringő folyadék'],
+  ['ARC','A fej elülső része'],
+  ['CSALÁD','Szülőkből és gyerekekből álló közösség'],
+  ['ANYA','Női szülő'],
+  ['APA','Férfi szülő'],
+  ['TESTVÉR','Közös szülőtől származó rokon'],
+  ['BARÁT','Közeli, megbízható ismerős'],
+  ['MUNKA','Kereset fejében végzett tevékenység'],
+  ['PÉNZ','Fizetőeszköz'],
+  ['ÉLET','Születéstől halálig tartó lét'],
+  ['ÁLOM','Alvás közbeni élmény'],
+  ['ÖRÖM','Kellemes érzés'],
+  ['REMÉNY','Bizakodó várakozás'],
+  ['SZÍN','Amit a szemünk érzékel'],
+  ['PIROS','A vér, a paradicsom színe'],
+  ['ZÖLD','A fű, a levelek színe'],
+  ['SÁRGA','A citrom, a nap színe'],
+  ['FEHÉR','A hó, a tej színe'],
+  ['FEKETE','A szén, az éjszaka színe'],
+  ['LEVES','Folyékony, meleg étel'],
+  ['HÚS','Állati eredetű élelmiszer'],
+  ['SAJT','Tejből készült élelmiszer'],
+  ['VAJ','Tejszínből köpült élelmiszer'],
+  ['TÉSZTA','Lisztből készült étel alapanyaga'],
+  ['GYÜMÖLCS','Növény édes termése'],
+  ['ZÖLDSÉG','Kerti, nem édes növényi élelmiszer'],
+  ['KRUMPLI','Föld alatt termő gumós zöldség'],
+  ['HAGYMA','Csípős illatú, rétegzett zöldség'],
+  ['CITROM','Savanyú sárga citrusgyümölcs'],
+  ['NARANCS','Édes-savanyú citrusgyümölcs'],
+  ['BANÁN','Sárga, hajlott trópusi gyümölcs'],
+  ['MÉZ','Méhek által készített édesség'],
+  ['OLLÓ','Vágásra szolgáló eszköz'],
+  ['KALAPÁCS','Szögek beveréséhez használt szerszám'],
+  ['SZÖG','Éles, hegyes rögzítőeszköz'],
+  ['ARANY','Értékes sárga nemesfém'],
+  ['EZÜST','Értékes fehér nemesfém'],
+  ['ÜVEG','Törékeny, átlátszó anyag'],
+  ['PAPÍR','Írásra használt anyag'],
+  ['RUHA','Testet fedő öltözék'],
+  ['CIPŐ','Lábbeli'],
+  ['KALAP','Fejfedő'],
+  ['IDŐ','Percekből, órákból álló fogalom'],
+  ['NŐ','Felnőtt női személy'],
+  ['ERŐS','Nagy fizikai erővel rendelkező'],
+  ['ELSŐ','A sorban legelső'],
+  ['TŰZ','Éget és világít'],
+  ['GYŰRŰ','Ujjra húzott ékszer'],
+  ['SZŰK','Nem tág, kicsi'],
+  ['KESZTYŰ','Kezet melegítő ruhadarab'],
+  ['ÚJ','Nem régi'],
+  ['KÚT','Vizet adó, földbe ásott nyílás'],
+  ['ÜNNEP','Különleges, ismétlődő esemény'],
+  ['TÜKÖR','Visszaveri a fényt'],
+  ['SÜT','Kenyeret, tésztát hővel készít'],
+  ['ÍZ','Amit a nyelvünk érzékel'],
+  ['ÍR','Betűket vet papírra'],
+  ['SÍ','Télisport-eszköz'],
+  ['SZÓ','Nyelvi egység, amiből mondat áll'],
+  ['FA','Törzsből, ágakból, levelekből álló növény'],
+  ['KŐ','Kemény ásványi anyag'],
+  ['LÉ','Gyümölcsből kifacsart folyadék'],
+  ['ÉN','Az alany, aki beszél'],
+  ['TE','A megszólított személy'],
+  ['MI','Kérdő vagy többes névmás'],
+  ['EZ','Közelre mutató névmás'],
+  ['AZ','Távolra mutató névmás'],
+  ['HA','Feltételt bevezető kötőszó'],
+  ['OK','Egy esemény kiváltó tényezője'],
+  ['ÚR','Megszólítás, tiszteletbeli cím'],
+  ['DE','Ellentétet kifejező kötőszó'],
+  ['BOR','Szőlőből készült szeszes ital'],
+  ['SÖR','Komlóból, malátából készült ital'],
+  ['TEA','Forró vízzel leforrázott ital'],
+  ['VAS','Kemény, mágneses fém'],
+  ['MAG','Növény szaporító egysége'],
+  ['LAP','Könyv vagy újság egy oldala'],
+  ['KOR','Egy adott történelmi időszak'],
+  ['HÓ','Télen hulló fehér csapadék'],
+  ['MEZŐ','Fátlan, füves terület'],
+  ['SZÉL','Mozgó levegő'],
+  ['NYÁR','Az év legmelegebb évszaka'],
+  ['TÉL','Az év leghidegebb évszaka'],
+  ['ŐSZ','Nyár utáni, lehulló levelű évszak'],
+  ['HÉT','Hét napból álló időszak'],
+  ['ÓRA','Az időt mérő eszköz'],
+  ['ESTE','A nap vége, sötétedés ideje'],
+  ['ESŐ','Az égből hulló csapadék'],
+  ['FELHŐ','Az égen úszó vízpára-alakzat'],
+  ['VIHAR','Erős széllel, esővel járó jelenség'],
+  ['AJTÓ','Bejáratot záró nyílászáró'],
+  ['SZOBA','Lakás egy helyisége'],
+  ['PADLÓ','A szoba alsó, járható felülete'],
+  ['CSÓK','Szeretet gyengéd kifejezése'],
+  ['TÁNC','Zenére végzett mozgásforma'],
+  ['DAL','Énekelt zenemű'],
+  ['MESE','Gyerekeknek szóló elbeszélés'],
+  ['VERS','Rímekbe szedett irodalmi mű'],
+  ['NAGY','Nem kicsi, terjedelmes'],
+  ['JÓ','Kedvező, pozitív tulajdonságú'],
+  ['ROSSZ','Nem jó, kedvezőtlen'],
+  ['SZÉP','Esztétikailag tetsző'],
+  ['RÉGI','Nem új, hosszú ideje létező'],
+  ['GYORS','Nagy sebességgel haladó'],
+  ['LASSÚ','Nem gyors'],
+  ['MAGAS','Nagy testmagasságú vagy kiterjedésű'],
+  ['EMBER','Homo sapiens, emberi lény'],
+  ['VILÁG','A Föld, vagy a mindenség'],
+  ['ORSZÁG','Önálló állami közösség'],
+  ['NYELV','Kommunikációs rendszer, vagy szánkban lévő szerv'],
+];
+
+// 3-4 betűs rácskitöltő rövidítések — NEM számítanak bele a tantervi arányba
+const ABBREVIATIONS = [
+  ['MTA','Magyar Tudományos Akadémia'],
+  ['TSZ','Termelőszövetkezet'],
+  ['KFT','Korlátolt felelősségű társaság'],
+  ['MÁV','Magyar Államvasutak'],
+  ['BKV','Budapesti Közlekedési Vállalat'],
+  ['MOL','Magyar Olaj- és Gázipari Rt.'],
+  ['OTP','Országos Takarékpénztár'],
+  ['MNB','Magyar Nemzeti Bank'],
+  ['ÁFA','Általános forgalmi adó'],
+  ['MDF','Magyar Demokrata Fórum'],
+  ['KISZ','Kommunista Ifjúsági Szövetség'],
+  ['ÁVH','Államvédelmi Hatóság'],
+  ['ENSZ','Egyesült Nemzetek Szervezete'],
+  ['NATO','Észak-atlanti Szerződés Szervezete'],
+  ['ELTE','Eötvös Loránd Tudományegyetem'],
+  ['BME','Budapesti Műszaki Egyetem'],
+];
+
+// A szólisták forrása: NAT-2020 kerettantervi fogalom- és adattár
+// (Ókor / Középkor / Kora újkor / Újkor / Világháborúk kora / Hidegháború kora / Jelenkor)
+const CURRICULUM = {
+  okorigorog: {
+    label: 'Ókori Görögország',
+    words: [
+      ['POLISZ','Ókori görög városállam'],
+      ['DEMOKRÁCIA','Athéni államforma, "népuralom"'],
+      ['ARISZTOKRÁCIA','Előkelők uralma'],
+      ['NÉPGYŰLÉS','Athéni döntéshozó fórum'],
+      ['SZTRATÉGOSZ','Athéni hadvezéri tisztség'],
+      ['CSERÉPSZAVAZÁS','Politikusok száműzésének eljárása'],
+      ['SPÁRTA','Katonai görög városállam'],
+      ['OLÜMPIA','Ókori sportjátékok színhelye'],
+      ['AKROPOLISZ','Athén szent várhegye'],
+      ['FILOZÓFIA','"A bölcsesség szeretete"'],
+      ['RABSZOLGA','Jogfosztott, tulajdonolt ember'],
+      ['PERIKLÉSZ','Athén vezető politikusa'],
+      ['PLATÓN','Szókratész tanítványa'],
+      ['ARISZTOTELÉSZ','Nagy Sándor nevelője'],
+      ['HÉRODOTOSZ','"A történetírás atyja"'],
+      ['NAGYSÁNDOR','Makedón hódító uralkodó'],
+      ['TRÓJA','Homérosz ostromlott városa'],
+    ]
+  },
+  okorirroma: {
+    label: 'Ókori Róma',
+    words: [
+      ['SENATUS','Róma vezető testülete'],
+      ['CONSUL','Köztársasági Róma vezető tisztsége'],
+      ['DICTATOR','Ideiglenes rendkívüli hatalom'],
+      ['NÉPTRIBUNUS','Plebejusokat védő tisztségviselő'],
+      ['FORUM','Róma központi tere'],
+      ['AMFITEÁTRUM','Gladiátorviadalok színhelye'],
+      ['GLADIÁTOR','Arénában küzdő harcos'],
+      ['LEGIÓ','Római hadsereg egysége'],
+      ['PROVINCIA','Meghódított tartomány'],
+      ['LIMES','Birodalom védelmi határvonala'],
+      ['POLGÁRJOG','Fontos jogi státusz Rómában'],
+      ['PATRÍCIUS','Előkelő származású római'],
+      ['PLEBS','Róma köznépe'],
+      ['CSÁSZÁR','Egyeduralkodó címe'],
+      ['CAESAR','Meggyilkolt római hadvezér'],
+      ['AUGUSTUS','Első római császár'],
+      ['PANNÓNIA','Kárpát-medencei római tartomány'],
+      ['AQUINCUM','Óbuda helyén állt római település'],
+      ['KERESZTÉNYSÉG','Jézus tanításain alapuló vallás'],
+      ['APOSTOL','Jézus tanítványa'],
+      ['EVANGÉLIUM','Jézusról szóló bibliai könyv'],
+      ['DIASZPÓRA','Zsidóság szétszóródása'],
+    ]
+  },
+  kozepkorimagyarorszag: {
+    label: 'Középkori Magyarország (Árpád-ház)',
+    words: [
+      ['ISTVÁN','Magyarország államalapító királya'],
+      ['KORONA','Uralkodói jelkép'],
+      ['VÁRMEGYE','István közigazgatási egysége'],
+      ['ESZTERGOM','Első magyar érsekség székhelye'],
+      ['FEUDALIZMUS','Középkori birtok-függési rendszer'],
+      ['HŰBÉRISÉG','Hűségen alapuló birtokrendszer'],
+      ['JOBBÁGY','Röghöz kötött paraszt'],
+      ['ROBOT','Jobbágyi ingyenmunka'],
+      ['TIZED','Egyházi adónem'],
+      ['NÁDOR','Középkori főméltóság'],
+      ['ISPÁN','Vármegye élén álló tisztségviselő'],
+      ['ARANYBULLA','II. András 1222-es kiváltságlevele'],
+      ['TATÁRJÁRÁS','1241–42-es mongol pusztítás'],
+      ['MUHI','Tatárjárás egyik csatahelyszíne'],
+      ['GÉZA','István apja'],
+      ['KOPPÁNY','István trónkövetelő ellenfele'],
+      ['GELLÉRT','Vértanú püspök István korából'],
+      ['LÁSZLÓ','Törvényhozó szent király'],
+      ['KÁLMÁN','"Könyves" melléknevű király'],
+      ['VÉRSZERZŐDÉS','Törzsek esküje Árpád mellett'],
+      ['TÖRZS','Honfoglaló magyarság szervezeti egysége'],
+      ['ETELKÖZ','Szállásterület honfoglalás előtt'],
+      ['KÁRPÁTMEDENCE','Honfoglalók elfoglalt területe'],
+    ]
+  },
+  anjoukora: {
+    label: 'Anjou-kor',
+    words: [
+      ['KÁROLY','Első Anjou magyar király'],
+      ['NAGYLAJOS','Károly fia, "Nagy" király'],
+      ['ARANYFORINT','Károly Róbert pénzneme'],
+      ['BÁNYAVÁROS','Anjou-kori bányászati település'],
+      ['VISEGRÁD','1335-ös királytalálkozó helyszíne'],
+      ['PERSZONÁLUNIÓ','Közös uralkodó két ország élén'],
+    ]
+  },
+  hunyadiakmatyas: {
+    label: 'Hunyadiak és Mátyás kora',
+    words: [
+      ['HUNYADI','Nándorfehérvár győztes hadvezére'],
+      ['KORMÁNYZÓ','Hunyadi tisztsége V. László helyett'],
+      ['VÁRNA','1444-es vesztes csata helyszíne'],
+      ['ZSOLDOS','Zsold fejében harcoló katona'],
+      ['MÁTYÁS','"Igazságos" melléknevű király'],
+      ['CORVINA','Mátyás híres könyvtára'],
+      ['FEKETESEREG','Mátyás zsoldos hadserege'],
+      ['NÁNDORFEHÉRVÁR','1456-os győztes csata helyszíne'],
+      ['RENESZÁNSZ','Itáliai irányzat Mátyás udvarában'],
+    ]
+  },
+  mohacshodoltsag: {
+    label: 'Mohács és török hódoltság',
+    words: [
+      ['MOHÁCS','1526-os vesztes csata helyszíne'],
+      ['SZULEJMÁN','Mohácsot vezető szultán'],
+      ['SZULTÁN','Oszmán uralkodó címe'],
+      ['SZPÁHI','Oszmán lovas katona'],
+      ['JANICSÁR','Elit oszmán gyalogos'],
+      ['HÓDOLTSÁG','Török uralom alatti terület'],
+      ['VÉGVÁR','Hódoltsági határerődítmény'],
+      ['SZEKÉRVÁR','Szekerekből épített védelem'],
+      ['EGER','1552-es híres ostrom helyszíne'],
+      ['DOBÓ','Eger hős várvédője'],
+      ['SZIGETVÁR','Zrínyi híres várvédése'],
+      ['ZRÍNYI','1566-ban elesett szigetvári hős'],
+      ['ERDÉLY','Önálló fejedelemség a török korban'],
+      ['BETHLEN','Erdély fejedelme, fénykor'],
+      ['BOCSKAI','Habsburg-ellenes felkelés vezetője'],
+      ['HAJDÚ','Bocskai felszabadított katonái'],
+      ['BUDA','1541-ben elfoglalt főváros'],
+    ]
+  },
+  rakoczifelkeles: {
+    label: 'Rákóczi-szabadságharc',
+    words: [
+      ['RÁKÓCZI','Szabadságharc vezetője'],
+      ['KURUC','Habsburg-ellenes felkelő'],
+      ['LABANC','Habsburg-párti erő'],
+      ['BERCSÉNYI','Rákóczi fő hadvezére'],
+      ['SZÉCSÉNY','1705-ös országgyűlés helyszíne'],
+      ['ÓNOD','1707-es országgyűlés helyszíne'],
+      ['TRÓNFOSZTÁS','Uralkodó megfosztása trónjától'],
+      ['SZATMÁR','1711-es békekötés helyszíne'],
+    ]
+  },
+  reformkor: {
+    label: 'Reformkor (1830–1848)',
+    words: [
+      ['SZÉCHENYI','"Legnagyobb magyar"'],
+      ['KOSSUTH','Pesti Hírlap szerkesztője'],
+      ['WESSELÉNYI','"Az árvízi hajós"'],
+      ['KÖLCSEY','Himnusz szerzője'],
+      ['DEÁK','"A haza bölcse"'],
+      ['HITEL','Széchenyi 1830-as könyve'],
+      ['LÁNCHÍD','Széchenyi budapesti hídja'],
+      ['JOBBÁGY','Felszabadításra váró réteg'],
+      ['ÖRÖKVÁLTSÁG','Jobbágyszolgáltatás megváltása'],
+      ['DIÉTA','Országgyűlés korabeli neve'],
+      ['CENZÚRA','Sajtószabadság korlátozása'],
+      ['SAJTÓSZABADSÁG','Cenzúra eltörlésének követelése'],
+      ['BATTHYÁNY','Első felelős kormány vezetője'],
+      ['HONVÉDSÉG','1848-as magyar hadsereg'],
+      ['GÖRGEI','Szabadságharc sikeres hadvezére'],
+      ['BEM','Lengyel honvédtábornok'],
+      ['PÁKOZD','1848-as győztes csata'],
+      ['VILÁGOS','1849-es fegyverletétel helyszíne'],
+      ['ARAD','Vértanúk kivégzésének helyszíne'],
+    ]
+  },
+  dualizmus: {
+    label: 'Dualizmus kora (kiegyezés)',
+    words: [
+      ['KIEGYEZÉS','1867-es osztrák–magyar megegyezés'],
+      ['DUALIZMUS','Monarchia kettős berendezkedése'],
+      ['DEÁK','Kiegyezés fő magyar alakja'],
+      ['ANDRÁSSY','Első kiegyezés utáni miniszterelnök'],
+      ['MONARCHIA','Ausztria–Magyarország közös állama'],
+      ['KÖZÖSÜGY','Monarchia közös ügyköre'],
+      ['LIBERALIZMUS','Szabadságjogokat hangsúlyozó irányzat'],
+      ['NACIONALIZMUS','Nemzeti érdek eszmeáramlata'],
+      ['IPARIFORRADALOM','Gépi nagyipar kora'],
+      ['MILLENNIUM','Honfoglalás 1000 éves ünnepe'],
+    ]
+  },
+  elsovilaghaboru: {
+    label: 'Első világháború és Trianon',
+    words: [
+      ['SZARAJEVÓ','Ferenc Ferdinánd meggyilkolása'],
+      ['ANTANT','I. világháborús szövetségi rendszer'],
+      ['VILLÁMHÁBORÚ','Gyors győzelemre törő hadviselés'],
+      ['ÁLLÓHÁBORÚ','Lövészárkos hadviselés'],
+      ['HÁTORSZÁG','Fronttól távoli polgári terület'],
+      ['TRIANON','1920-as békeszerződés helyszíne'],
+      ['ŐSZIRÓZSA','1918-as forradalom jelképe'],
+      ['KÁROLYI','Őszirózsás forradalom vezetője'],
+      ['TANÁCSKÖZTÁRSASÁG','1919-es kommunista hatalomátvétel'],
+      ['VÖRÖSTERROR','Tanácsköztársaság megtorlása'],
+      ['NÉPSZÖVETSÉG','Világháború utáni nemzetközi szervezet'],
+      ['KISANTANT','Magyarország elleni szövetség'],
+      ['JÓVÁTÉTEL','Vesztesek háborús kártérítése'],
+    ]
+  },
+  ketvilaghaboru: {
+    label: 'Két világháború közötti Magyarország',
+    words: [
+      ['HORTHY','Két világháború közötti kormányzó'],
+      ['REVÍZIÓ','Trianoni határok megváltoztatása'],
+      ['KONSZOLIDÁCIÓ','1920-as évek stabilizációja'],
+      ['BETHLEN','Konszolidáció miniszterelnöke'],
+      ['NUMERUSCLAUSUS','Zsidó hallgatókat korlátozó törvény'],
+      ['GÖMBÖS','Jobboldali radikális miniszterelnök'],
+      ['ZSIDÓTÖRVÉNY','Zsidóság jogait korlátozó törvény'],
+      ['TRIANON','1920-as békeszerződés helyszíne'],
+    ]
+  },
+  masodikvilaghaboru: {
+    label: 'Második világháború',
+    words: [
+      ['FASIZMUS','Mussolini állameszméje'],
+      ['NEMZETISZOCIALIZMUS','Hitler ideológiája'],
+      ['ANSCHLUSS','Ausztria bekebelezése 1938-ban'],
+      ['GETTÓ','Zsidóság elkülönített lakónegyede'],
+      ['DEPORTÁLÁS','Zsidóság táborokba hurcolása'],
+      ['MUNKASZOLGÁLAT','Üldözöttek kényszermunkája'],
+      ['HOLOKAUSZT','Zsidóság elpusztítása'],
+      ['NORMANDIA','1944-es partraszállás helyszíne'],
+      ['SZTÁLINGRÁD','Háború fordulópontja'],
+      ['DONKANYAR','Magyar 2. hadsereg tragédiája'],
+      ['KIUGRÁSIKÍSÉRLET','Horthy 1944-es próbálkozása'],
+      ['SZÁLASI','Nyilas hatalomátvétel vezetője'],
+      ['NYILASOK','Szélsőjobb mozgalom tagjai'],
+    ]
+  },
+  ottvenhat: {
+    label: '1956-os forradalom',
+    words: [
+      ['FORRADALOM','1956 októberi esemény'],
+      ['SORTŰZ','Fegyveres tömegoszlatás'],
+      ['KOSSUTHTÉR','1956-os sortűz helyszíne'],
+      ['MENEKÜLT','1956 utáni elhagyás'],
+      ['NAGYIMRE','1956-os miniszterelnök'],
+      ['MINDSZENTY','1956-ban kiszabadult hercegprímás'],
+      ['KÁDÁR','Megtorlás és konszolidáció vezetője'],
+    ]
+  },
+  kadarkorszak: {
+    label: 'Kádár-korszak',
+    words: [
+      ['KÁDÁR','Megtorlás és konszolidáció vezetője'],
+      ['MEGTORLÁS','1956 utáni büntetőintézkedések'],
+      ['SZOCIALIZMUS','Kádár-kor államideológiája'],
+      ['TERVGAZDASÁG','Központi gazdaságirányítás'],
+      ['GULYÁSKOMMUNIZMUS','Enyhébb szocializmus elnevezése'],
+      ['HÁZTÁJI','Magángazdálkodású földterület'],
+      ['ÚTTÖRŐ','Kádár-kori ifjúsági mozgalom tagja'],
+      ['MUNKÁSŐRSÉG','Pártállam fegyveres szervezete'],
+    ]
+  },
+  rendszervaltas: {
+    label: 'Rendszerváltás',
+    words: [
+      ['RENDSZERVÁLTÁS','1989–90-es átalakulás'],
+      ['ANTALL','Első szabad miniszterelnök 1990-ben'],
+      ['GÖNCZ','Első köztársasági elnök'],
+      ['GORBACSOV','Peresztrojka vezető politikusa'],
+      ['BERLINIFAL','1989-ben lebontott építmény'],
+      ['KEREKASZTAL','1989-es tárgyalások'],
+      ['PRIVATIZÁCIÓ','Állami vagyon magánosítása'],
+      ['ALKOTMÁNYBÍRÓSÁG','Rendszerváltás utáni jogvédő testület'],
+      ['KÖZTÁRSASÁG','1989. október 23-i államforma'],
+    ]
+  },
+  jelenkor: {
+    label: 'Jelenkor (EU-integráció)',
+    words: [
+      ['EURÓPAIUNIÓ','Magyarország 2004 óta tagja'],
+      ['SCHENGEN','Határellenőrzés nélküli utazás'],
+      ['EURÓ','EU közös pénzneme'],
+      ['GLOBALIZÁCIÓ','Világ összekapcsolódása'],
+      ['MIGRÁCIÓ','Népességmozgás országok közt'],
+      ['ALAPTÖRVÉNY','Magyarország 2012 óta hatályos alkotmánya'],
+    ]
+  }
+};
+
+// ============================================================
+// 2) RÁCSGENERÁLÓ MOTOR
+// ============================================================
+function normalizeSolution(sentence) {
+  return sentence.toUpperCase().replace(/[^A-ZÁÉÍÓÖŐÚÜŰ]/g, '').split('');
+}
+function gkey(r, c) { return r + '_' + c; }
+
+// Az anekdota szövegéből tartalmas szavakat nyerünk ki, meghatározásként
+// a mondatban közvetlenül előtte/utána álló szót használva.
+const ANECDOTE_STOPWORDS = new Set([
+  'A','AZ','ÉS','DE','HOGY','IS','NEM','MINT','HA','VAGY','AKKOR','MAJD','MEG','MÉG',
+  'CSAK','MÁR','ITT','OTT','EZT','AZT','NEKI','RÓLA','EGY','ENNEK','ANNAK','VOLT',
+  'LETT','LESZ','VAN','VANNAK','EZ','AKI','AMI','AHOL','AMIKOR','MERT','ÍGY','ÚGY',
+  'ILYEN','OLYAN','MINDEN','SOK','KEVÉS','NAGY','KIS','ŐT','ŐK','MI','TI','ŐK','ÉN',
+  'TE','MI','ATTÓL','ETTŐL','ANNÁL','ENNÉL','MIKOR','MIÉRT','HISZEN','TEHÁT'
+]);
+function cleanContextWord(t) {
+  return t.replace(/^[„"'\(\[]+/, '').replace(/[.,;:!?"'”\)\]]+$/, '');
+}
+function nearestContext(tokens, i, dir) {
+  let j = i + dir;
+  while (j >= 0 && j < tokens.length) {
+    const c = cleanContextWord(tokens[j]);
+    if (c) return c;
+    j += dir;
+  }
+  return '';
+}
+function extractAnecdoteWords(anecdoteText) {
+  if (!anecdoteText) return [];
+  const rawTokens = anecdoteText.split(/\s+/).filter(Boolean);
+  const cleanWord = (t) => t.toUpperCase().replace(/[^A-ZÁÉÍÓÖŐÚÜŰ]/g, '');
+  const seen = new Set();
+  const entries = [];
+  for (let i = 0; i < rawTokens.length; i++) {
+    if (/\d/.test(rawTokens[i])) continue; // számmal kevert token (pl. "1825-ben") ne legyen önálló rácsszó
+    const clean = cleanWord(rawTokens[i]);
+    if (clean.length < 3 || ANECDOTE_STOPWORDS.has(clean) || seen.has(clean)) continue;
+    seen.add(clean);
+    const prev = nearestContext(rawTokens, i, -1);
+    const next = nearestContext(rawTokens, i, 1);
+    let clue;
+    if (prev && next) clue = `${prev} ___ ${next}`;
+    else if (prev) clue = `${prev} ___`;
+    else if (next) clue = `___ ${next}`;
+    else continue;
+    entries.push({ word: clean, clue, priority: 10 });
+  }
+  return entries;
+}
+
+class CrosswordEngine {
+  constructor(wordPool) {
+    this.pool = wordPool.filter(w => /^[A-ZÁÉÍÓÖŐÚÜŰ]+$/.test(w.word));
+  }
+  generate(sentence, opts = {}) {
+    const maxAttempts = opts.maxAttempts || 60000;
+    const letters = normalizeSolution(sentence);
+    if (letters.length === 0) return { success: false, reason: 'Üres megoldás-mondat.' };
+    this.grid = new Map();
+    this.usedWords = new Set();
+    this.placedWords = [];
+    this.attempts = 0;
+    this.maxAttempts = maxAttempts;
+    const ok = this._solve(letters, 0);
+    if (!ok) return { success: false, reason: 'Nem sikerült érvényes rácsot találni. Próbálj rövidebb mondatot, vagy bővítsd a szókészletet.' };
+    this._fillExtraCrossings();
+    this._fillEmptyRegions();
+    return { success: true, grid: this.grid, placedWords: this.placedWords, letters };
+  }
+  _candidatesFor(letter) {
+    return this.pool.filter(w => !this.usedWords.has(w.word) && w.word.includes(letter))
+      .sort((a, b) => (b.priority || 0) - (a.priority || 0) || b.word.length - a.word.length);
+  }
+  _canPlace(word, dir, r, c) {
+    const n = word.length;
+    const before = dir === 'across' ? gkey(r, c - 1) : gkey(r - 1, c);
+    const after = dir === 'across' ? gkey(r, c + n) : gkey(r + n, c);
+    if (this.grid.has(before) && this.grid.get(before).letter) return false;
+    if (this.grid.has(after) && this.grid.get(after).letter) return false;
+    for (let i = 0; i < n; i++) {
+      const rr = dir === 'across' ? r : r + i;
+      const cc = dir === 'across' ? c + i : c;
+      const k = gkey(rr, cc);
+      const existing = this.grid.get(k);
+      if (existing) {
+        if (existing.letter !== word[i]) return false;
+        if (existing.passDirs.has(dir)) return false;
+      } else {
+        const n1 = dir === 'across' ? gkey(rr - 1, cc) : gkey(rr, cc - 1);
+        const n2 = dir === 'across' ? gkey(rr + 1, cc) : gkey(rr, cc + 1);
+        if (this.grid.has(n1) && this.grid.get(n1).letter) return false;
+        if (this.grid.has(n2) && this.grid.get(n2).letter) return false;
+      }
+    }
+    const clueKey = before;
+    const clueCell = this.grid.get(clueKey);
+    if (clueCell && clueCell.letter) return false;
+    if (clueCell && dir === 'across' && clueCell.acrossClue) return false;
+    if (clueCell && dir === 'down' && clueCell.downClue) return false;
+    return true;
+  }
+  _place(wordObj, dir, r, c, solutionLetterIndex, solutionSeq) {
+    const word = wordObj.word, n = word.length;
+    for (let i = 0; i < n; i++) {
+      const rr = dir === 'across' ? r : r + i;
+      const cc = dir === 'across' ? c + i : c;
+      const k = gkey(rr, cc);
+      let cell = this.grid.get(k);
+      if (!cell) { cell = { letter: word[i], passDirs: new Set(), solutionIndex: null, acrossClue: null, downClue: null }; this.grid.set(k, cell); }
+      cell.passDirs.add(dir);
+      if (i === solutionLetterIndex) cell.solutionIndex = solutionSeq;
+    }
+    const clueKey = dir === 'across' ? gkey(r, c - 1) : gkey(r - 1, c);
+    let clueCell = this.grid.get(clueKey);
+    if (!clueCell) { clueCell = { letter: null, passDirs: new Set(), solutionIndex: null, acrossClue: null, downClue: null }; this.grid.set(clueKey, clueCell); }
+    if (dir === 'across') clueCell.acrossClue = wordObj.clue; else clueCell.downClue = wordObj.clue;
+    this.usedWords.add(word);
+    this.placedWords.push({ word, dir, r, c, clue: wordObj.clue, solutionSeq });
+  }
+  _unplace(wordObj, dir, r, c) {
+    const word = wordObj.word, n = word.length;
+    for (let i = 0; i < n; i++) {
+      const rr = dir === 'across' ? r : r + i;
+      const cc = dir === 'across' ? c + i : c;
+      const k = gkey(rr, cc);
+      const cell = this.grid.get(k);
+      cell.passDirs.delete(dir);
+      if (cell.passDirs.size === 0 && !cell.acrossClue && !cell.downClue) this.grid.delete(k);
+    }
+    const clueKey = dir === 'across' ? gkey(r, c - 1) : gkey(r - 1, c);
+    const clueCell = this.grid.get(clueKey);
+    if (clueCell) {
+      if (dir === 'across') clueCell.acrossClue = null; else clueCell.downClue = null;
+      if (!clueCell.letter && !clueCell.acrossClue && !clueCell.downClue) this.grid.delete(clueKey);
+    }
+    this.usedWords.delete(word);
+    this.placedWords.pop();
+    for (let i = 0; i < n; i++) {
+      const rr = dir === 'across' ? r : r + i;
+      const cc = dir === 'across' ? c + i : c;
+      const cell = this.grid.get(gkey(rr, cc));
+      if (cell && cell.passDirs.size === 0) cell.solutionIndex = null;
+    }
+  }
+  _solve(letters, index) {
+    if (index === letters.length) return true;
+    this.attempts++;
+    if (this.attempts > this.maxAttempts) return false;
+    const letter = letters[index];
+    const candidates = this._candidatesFor(letter);
+    if (this.grid.size === 0) {
+      for (const wordObj of candidates) {
+        const positions = [...wordObj.word].map((ch, i) => ch === letter ? i : -1).filter(i => i >= 0);
+        for (const pos of positions) {
+          const c0 = -pos;
+          if (this._canPlace(wordObj.word, 'across', 0, c0)) {
+            this._place(wordObj, 'across', 0, c0, pos, index + 1);
+            if (this._solve(letters, index + 1)) return true;
+            this._unplace(wordObj, 'across', 0, c0);
+          }
+        }
+      }
+      return false;
+    }
+    for (const wordObj of candidates) {
+      const word = wordObj.word;
+      const positions = [...word].map((ch, i) => ch === letter ? i : -1).filter(i => i >= 0);
+      const crossingOptions = [];
+      for (const [k, cell] of this.grid.entries()) {
+        if (!cell.letter) continue;
+        for (let j = 0; j < word.length; j++) {
+          if (word[j] === cell.letter) {
+            const [r0, c0] = k.split('_').map(Number);
+            const candidateDirs = ['across', 'down'].filter(d => !cell.passDirs.has(d));
+            for (const dir of candidateDirs) crossingOptions.push({ j, r0, c0, dir });
+          }
+        }
+      }
+      for (const opt of crossingOptions) {
+        const { j, r0, c0, dir } = opt;
+        const r = dir === 'across' ? r0 : r0 - j;
+        const c = dir === 'across' ? c0 - j : c0;
+        for (const pos of positions) {
+          if (this._canPlace(word, dir, r, c)) {
+            this._place(wordObj, dir, r, c, pos, index + 1);
+            if (this._solve(letters, index + 1)) return true;
+            this._unplace(wordObj, dir, r, c);
+          }
+          if (this.attempts > this.maxAttempts) return false;
+        }
+      }
+    }
+    return false;
+  }
+  _fillExtraCrossings() {
+    const snap = [...this.grid.entries()].filter(([k, cell]) => cell.letter);
+    for (const [k, cell] of snap) {
+      if (cell.passDirs.size >= 2) continue;
+      const [r0, c0] = k.split('_').map(Number);
+      const existingDir = [...cell.passDirs][0];
+      const newDir = existingDir === 'across' ? 'down' : 'across';
+      const letter = cell.letter;
+      const candidates = this._candidatesFor(letter).slice(0, 15);
+      for (const wordObj of candidates) {
+        const word = wordObj.word;
+        const positions = [...word].map((ch, i) => ch === letter ? i : -1).filter(i => i >= 0);
+        let done = false;
+        for (const pos of positions) {
+          const r = newDir === 'across' ? r0 : r0 - pos;
+          const c = newDir === 'across' ? c0 - pos : c0;
+          if (this._canPlace(word, newDir, r, c)) {
+            this._place(wordObj, newDir, r, c, -1, null);
+            done = true;
+            break;
+          }
+        }
+        if (done) break;
+      }
+    }
+  }
+
+  // Üres (majdan fekete) foltokba is beillesztünk rövid, önálló szavakat,
+  // hogy a rács a lehető legkevesebb fekete cellával legyen kitöltve.
+  _fillEmptyRegions(maxRounds = 5) {
+    let minR = Infinity, maxR = -Infinity, minC = Infinity, maxC = -Infinity;
+    for (const k of this.grid.keys()) {
+      const [r, c] = k.split('_').map(Number);
+      minR = Math.min(minR, r); maxR = Math.max(maxR, r);
+      minC = Math.min(minC, c); maxC = Math.max(maxC, c);
+    }
+    if (!isFinite(minR)) return;
+    for (let round = 0; round < maxRounds; round++) {
+      let changed = false;
+      const shortWords = this.pool.filter(w => !this.usedWords.has(w.word)).sort((a, b) => (b.priority || 0) - (a.priority || 0) || a.word.length - b.word.length).slice(0, 60);
+      for (let r = minR; r <= maxR; r++) {
+        for (let c = minC; c <= maxC; c++) {
+          const k = gkey(r, c);
+          if (this.grid.has(k)) continue;
+          let placed = false;
+          for (const dir of ['across', 'down']) {
+            if (placed) break;
+            for (const wordObj of shortWords) {
+              if (this.usedWords.has(wordObj.word)) continue;
+              const n = wordObj.word.length;
+              let done = false;
+              for (let pos = 0; pos < n; pos++) {
+                const startR = dir === 'across' ? r : r - pos;
+                const startC = dir === 'across' ? c - pos : c;
+                if (this._canPlace(wordObj.word, dir, startR, startC)) {
+                  this._place(wordObj, dir, startR, startC, -1, null);
+                  done = true;
+                  break;
+                }
+              }
+              if (done) { placed = true; changed = true; break; }
+            }
+          }
+        }
+      }
+      if (!changed) break;
+    }
+  }
+}
+
+// ============================================================
+// 2b) RÁCSGENERÁLÓ MOTOR V2 — kanyargó (boustrophedon) megfejtés-sáv
+// A megfejtés összefüggő sávban fut: balról jobbra egy sort, majd egy lépés
+// le, jobbról balra a következőt, stb. — így néz ki egy valódi skandináv
+// rejtvény. Minden sávcellát egy függőleges, valódi szótári szó keresztez.
+// ============================================================
+function buildSnakePath(length, W) {
+  const path = [];
+  let row = 0, col = 0, dir = 1;
+  for (let i = 0; i < length; i++) {
+    path.push({ r: row, c: col, dir });
+    if (i < length - 1) {
+      const atEdge = dir === 1 ? (col === W - 1) : (col === 0);
+      if (!atEdge) col += dir;
+      else { row += 1; dir = -dir; }
+    }
+  }
+  return path;
+}
+
+class CrosswordEngineV2 {
+  constructor(wordPool) {
+    this.pool = wordPool.filter(w => /^[A-ZÁÉÍÓÖŐÚÜŰ]+$/.test(w.word));
+  }
+
+  generate(sentence, opts = {}) {
+    const letters = normalizeSolution(sentence);
+    if (letters.length === 0) return { success: false, reason: 'Üres megoldás-mondat.' };
+
+    const configs = opts.configs || this._defaultConfigs();
+    const attemptsPerTry = opts.attemptsPerTry || 6000;
+    const restartsPerConfig = opts.restartsPerConfig || 4;
+    const overallCap = opts.maxAttempts || 100000;
+    let totalAttempts = 0;
+
+    for (const { W, rowSpacing } of configs) {
+      for (let restart = 0; restart < restartsPerConfig; restart++) {
+        if (totalAttempts > overallCap) {
+          return { success: false, reason: 'Túl sok próbálkozás után sem sikerült kanyargó elrendezést találni.', attempts: totalAttempts };
+        }
+        const result = this._attempt(letters, W, rowSpacing, attemptsPerTry, 1000 + restart * 97 + W * 13 + rowSpacing * 7);
+        totalAttempts += result.attempts;
+        if (result.success) { result.attempts = totalAttempts; return result; }
+      }
+    }
+    return { success: false, reason: 'Nem sikerült kanyargó elrendezést találni ehhez a mondathoz.', attempts: totalAttempts };
+  }
+
+  _defaultConfigs() {
+    const configs = [];
+    for (const W of [5, 6, 7, 8]) {
+      for (const rowSpacing of [4, 5, 6]) configs.push({ W, rowSpacing });
+    }
+    return configs;
+  }
+
+  _candidatesFor(letter) {
+    const matches = this.pool.filter(w => !this.usedWords.has(w.word) && w.word.includes(letter));
+    const priorityList = matches.filter(w => (w.priority || 0) > 0).sort((a, b) => b.word.length - a.word.length);
+    const rest = matches.filter(w => !(w.priority > 0)).sort((a, b) => b.word.length - a.word.length);
+    for (let i = rest.length - 1; i > 0; i--) {
+      const j = Math.floor(this._rand() * (i + 1));
+      [rest[i], rest[j]] = [rest[j], rest[i]];
+    }
+    return [...priorityList, ...rest];
+  }
+  _rand() {
+    this._seed = (this._seed + 0x6D2B79F5) | 0;
+    let t = this._seed;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  }
+
+  _canPlace(word, dir, r, c) {
+    const n = word.length;
+    const before = dir === 'across' ? gkey(r, c - 1) : gkey(r - 1, c);
+    const after = dir === 'across' ? gkey(r, c + n) : gkey(r + n, c);
+    if (this.grid.has(before) && this.grid.get(before).letter) return false;
+    if (this.grid.has(after) && this.grid.get(after).letter) return false;
+    for (let i = 0; i < n; i++) {
+      const rr = dir === 'across' ? r : r + i;
+      const cc = dir === 'across' ? c + i : c;
+      const k = gkey(rr, cc);
+      const existing = this.grid.get(k);
+      if (existing) {
+        if (existing.letter !== word[i]) return false;
+        if (existing.passDirs.has(dir)) return false;
+      } else {
+        const n1 = dir === 'across' ? gkey(rr - 1, cc) : gkey(rr, cc - 1);
+        const n2 = dir === 'across' ? gkey(rr + 1, cc) : gkey(rr, cc + 1);
+        if (this.grid.has(n1) && this.grid.get(n1).letter) return false;
+        if (this.grid.has(n2) && this.grid.get(n2).letter) return false;
+      }
+    }
+    const clueKey = before;
+    const clueCell = this.grid.get(clueKey);
+    if (clueCell && clueCell.letter) return false;
+    if (clueCell && dir === 'across' && clueCell.acrossClue) return false;
+    if (clueCell && dir === 'down' && clueCell.downClue) return false;
+    return true;
+  }
+
+  _place(wordObj, dir, r, c) {
+    const word = wordObj.word, n = word.length;
+    for (let i = 0; i < n; i++) {
+      const rr = dir === 'across' ? r : r + i;
+      const cc = dir === 'across' ? c + i : c;
+      const k = gkey(rr, cc);
+      let cell = this.grid.get(k);
+      if (!cell) { cell = { letter: word[i], passDirs: new Set(), solutionIndex: null, acrossClue: null, downClue: null, isPathCell: false }; this.grid.set(k, cell); }
+      cell.passDirs.add(dir);
+    }
+    const clueKey = dir === 'across' ? gkey(r, c - 1) : gkey(r - 1, c);
+    let clueCell = this.grid.get(clueKey);
+    if (!clueCell) { clueCell = { letter: null, passDirs: new Set(), solutionIndex: null, acrossClue: null, downClue: null, isPathCell: false }; this.grid.set(clueKey, clueCell); }
+    if (dir === 'across') clueCell.acrossClue = wordObj.clue; else clueCell.downClue = wordObj.clue;
+    this.usedWords.add(word);
+    this.placedWords.push({ word, dir, r, c, clue: wordObj.clue });
+  }
+
+  _unplace(wordObj, dir, r, c) {
+    const word = wordObj.word, n = word.length;
+    for (let i = 0; i < n; i++) {
+      const rr = dir === 'across' ? r : r + i;
+      const cc = dir === 'across' ? c + i : c;
+      const k = gkey(rr, cc);
+      const cell = this.grid.get(k);
+      cell.passDirs.delete(dir);
+      if (cell.passDirs.size === 0 && !cell.acrossClue && !cell.downClue && !cell.isPathCell) this.grid.delete(k);
+    }
+    const clueKey = dir === 'across' ? gkey(r, c - 1) : gkey(r - 1, c);
+    const clueCell = this.grid.get(clueKey);
+    if (clueCell) {
+      if (dir === 'across') clueCell.acrossClue = null; else clueCell.downClue = null;
+      if (!clueCell.letter && !clueCell.acrossClue && !clueCell.downClue && !clueCell.isPathCell) this.grid.delete(clueKey);
+    }
+    this.usedWords.delete(word);
+    this.placedWords.pop();
+  }
+
+  _attempt(letters, W, rowSpacing, maxAttempts, seed) {
+    const rawPath = buildSnakePath(letters.length, W);
+    const path = rawPath.map(p => ({ ...p, r: p.r * rowSpacing }));
+
+    this.grid = new Map();
+    this.usedWords = new Set();
+    this.placedWords = [];
+    this.attempts = 0;
+    this.maxAttempts = maxAttempts;
+    this._seed = seed;
+
+    path.forEach((p, i) => {
+      this.grid.set(gkey(p.r, p.c), {
+        letter: letters[i], passDirs: new Set(), solutionIndex: i + 1,
+        acrossClue: null, downClue: null, isPathCell: true, rowDir: p.dir
+      });
+    });
+
+    const ok = this._solvePath(path, letters, 0);
+    if (!ok) return { success: false, attempts: this.attempts };
+
+    this._fillExtraCrossings();
+    this._fillEmptyRegions();
+    return { success: true, grid: this.grid, placedWords: this.placedWords, letters, path, rowWidth: W, attempts: this.attempts };
+  }
+
+  _solvePath(path, letters, idx) {
+    if (idx === path.length) return true;
+    this.attempts++;
+    if (this.attempts > this.maxAttempts) return false;
+    const { r, c } = path[idx];
+    const letter = letters[idx];
+    const candidates = this._candidatesFor(letter);
+    for (const wordObj of candidates) {
+      const word = wordObj.word;
+      const positions = [...word].map((ch, i) => ch === letter ? i : -1).filter(i => i >= 0);
+      for (const pos of positions) {
+        const startR = r - pos, startC = c;
+        if (this._canPlace(word, 'down', startR, startC)) {
+          this._place(wordObj, 'down', startR, startC);
+          if (this._solvePath(path, letters, idx + 1)) return true;
+          this._unplace(wordObj, 'down', startR, startC);
+        }
+        if (this.attempts > this.maxAttempts) return false;
+      }
+    }
+    return false;
+  }
+
+  _fillExtraCrossings() {
+    const snap = [...this.grid.entries()].filter(([k, cell]) => cell.letter && !cell.isPathCell);
+    for (const [k, cell] of snap) {
+      if (cell.passDirs.size >= 2) continue;
+      const [r0, c0] = k.split('_').map(Number);
+      const existingDir = [...cell.passDirs][0];
+      const newDir = existingDir === 'across' ? 'down' : 'across';
+      const letter = cell.letter;
+      const candidates = this._candidatesFor(letter).slice(0, 15);
+      for (const wordObj of candidates) {
+        const word = wordObj.word;
+        const positions = [...word].map((ch, i) => ch === letter ? i : -1).filter(i => i >= 0);
+        let done = false;
+        for (const pos of positions) {
+          const r = newDir === 'across' ? r0 : r0 - pos;
+          const c = newDir === 'across' ? c0 - pos : c0;
+          if (this._canPlace(word, newDir, r, c)) {
+            this._place(wordObj, newDir, r, c);
+            done = true;
+            break;
+          }
+        }
+        if (done) break;
+      }
+    }
+  }
+
+  // Üres (majdan fekete) foltokba is beillesztünk rövid, önálló szavakat.
+  // A path-cellákat (isPathCell) nem érintjük — azok pozíciója és betűje fix.
+  _fillEmptyRegions(maxRounds = 5) {
+    let minR = Infinity, maxR = -Infinity, minC = Infinity, maxC = -Infinity;
+    for (const k of this.grid.keys()) {
+      const [r, c] = k.split('_').map(Number);
+      minR = Math.min(minR, r); maxR = Math.max(maxR, r);
+      minC = Math.min(minC, c); maxC = Math.max(maxC, c);
+    }
+    if (!isFinite(minR)) return;
+    for (let round = 0; round < maxRounds; round++) {
+      let changed = false;
+      const shortWords = this.pool.filter(w => !this.usedWords.has(w.word)).sort((a, b) => (b.priority || 0) - (a.priority || 0) || a.word.length - b.word.length).slice(0, 60);
+      for (let r = minR; r <= maxR; r++) {
+        for (let c = minC; c <= maxC; c++) {
+          const k = gkey(r, c);
+          if (this.grid.has(k)) continue;
+          let placed = false;
+          for (const dir of ['across', 'down']) {
+            if (placed) break;
+            for (const wordObj of shortWords) {
+              if (this.usedWords.has(wordObj.word)) continue;
+              const n = wordObj.word.length;
+              let done = false;
+              for (let pos = 0; pos < n; pos++) {
+                const startR = dir === 'across' ? r : r - pos;
+                const startC = dir === 'across' ? c - pos : c;
+                if (this._canPlace(wordObj.word, dir, startR, startC)) {
+                  this._place(wordObj, dir, startR, startC);
+                  done = true;
+                  break;
+                }
+              }
+              if (done) { placed = true; changed = true; break; }
+            }
+          }
+        }
+      }
+      if (!changed) break;
+    }
+  }
+}
+
+// ============================================================
+// 3) API-KIEGÉSZÍTÉS (opcionális) — ha a korszak szólistája túl rövid
+// ============================================================
+async function fetchExtraCurriculumWords(eraLabel, count) {
+  try {
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-6",
+        max_tokens: 1000,
+        messages: [{
+          role: "user",
+          content: `Adj ${count} darab, magyar középiskolai (9-12. évfolyam) történelem NAT kerettantervhez illeszkedő szót/fogalmat/nevet a(z) "${eraLabel}" témakörhöz, keresztrejtvénybe. Válaszolj KIZÁRÓLAG JSON tömbként, más szöveg nélkül, ebben a formában: [{"word":"SZÓ","clue":"rövid, egyértelmű definíció"}]. A "word" mező csupa nagybetűs legyen, ékezetekkel, szóköz és speciális karakter nélkül.`
+        }]
+      })
+    });
+    const data = await response.json();
+    const text = (data.content || []).map(b => b.text || '').join('');
+    const clean = text.replace(/```json|```/g, '').trim();
+    const parsed = JSON.parse(clean);
+    return parsed.filter(w => w.word && w.clue).map(w => ({ word: w.word.toUpperCase(), clue: w.clue }));
+  } catch (e) {
+    console.warn('API-kiegészítés nem sikerült:', e);
+    return [];
+  }
+}
+
+// ============================================================
+// 4) UI
+// ============================================================
+const eraSelect = document.getElementById('eraSelect');
+Object.entries(CURRICULUM).forEach(([key, val]) => {
+  const opt = document.createElement('option');
+  opt.value = key; opt.textContent = val.label;
+  eraSelect.appendChild(opt);
+});
+
+const sentenceInput = document.getElementById('sentenceInput');
+const generateBtn = document.getElementById('generateBtn');
+const statusLine = document.getElementById('statusLine');
+const puzzleArea = document.getElementById('puzzleArea');
+const gridEl = document.getElementById('gridEl');
+const solutionBox = document.getElementById('solutionBox');
+
+let currentResult = null;
+let currentBounds = null;
+
+generateBtn.addEventListener('click', async () => {
+  statusLine.className = 'status';
+  statusLine.textContent = 'Kanyargó elrendezés próbálása…';
+  generateBtn.disabled = true;
+  await new Promise(r => setTimeout(r, 30)); // hagyjuk kirajzolódni a státuszüzenetet
+
+  const sentence = sentenceInput.value.trim();
+  const anecdoteText = document.getElementById('anecdoteInput').value.trim();
+  const eraKey = eraSelect.value;
+  const era = CURRICULUM[eraKey];
+
+  let curriculumWords = era.words.map(([w, c]) => ({ word: w, clue: c }));
+  let anecdoteWords = extractAnecdoteWords(anecdoteText);
+
+  let pool = [
+    ...GENERAL_WORDS.map(([w, c]) => ({ word: w, clue: c })),
+    ...ABBREVIATIONS.map(([w, c]) => ({ word: w, clue: c })),
+    ...curriculumWords,
+    ...anecdoteWords
+  ];
+
+  // 1. próbálkozás: V2 motor — kanyargó, összefüggő megfejtés-sáv (igazi "skandináv" élmény)
+  let engineV2 = new CrosswordEngineV2(pool);
+  let result = engineV2.generate(sentence);
+  let usedFallback = false;
+
+  // 2. próbálkozás: ha a V2 nem sikerült, API-val bővítjük a tantervi szókészletet, újra V2
+  if (!result.success) {
+    statusLine.textContent = 'Nem sikerült elsőre — tantervi szókészlet bővítése API-val…';
+    const extra = await fetchExtraCurriculumWords(era.label, 10);
+    if (extra.length > 0) {
+      pool = [...pool, ...extra];
+      engineV2 = new CrosswordEngineV2(pool);
+      result = engineV2.generate(sentence);
+    }
+  }
+
+  // 3. próbálkozás: ha a kanyargó elrendezés így sem sikerült, visszaesünk az egyszerűbb (V1) elrendezésre
+  if (!result.success) {
+    statusLine.textContent = 'Kanyargó elrendezés nem sikerült — egyszerűbb elrendezésre váltás…';
+    const engineV1 = new CrosswordEngine(pool);
+    result = engineV1.generate(sentence);
+    usedFallback = true;
+  }
+
+  generateBtn.disabled = false;
+
+  if (!result.success) {
+    statusLine.className = 'status error';
+    statusLine.textContent = 'Sikertelen: ' + result.reason + ' Próbálj rövidebb mondatot.';
+    return;
+  }
+
+  statusLine.className = 'status ok';
+  statusLine.textContent = usedFallback
+    ? `Kész — ${result.placedWords.length} szó elhelyezve (egyszerűbb elrendezés, mert a kanyargó verzió ehhez a mondathoz nem sikerült).`
+    : `Kész — ${result.placedWords.length} szó elhelyezve (kanyargó elrendezés).`;
+  currentResult = result;
+  renderGrid(result);
+  const anecdoteBox = document.getElementById('anecdoteBox');
+  if (anecdoteText) {
+    anecdoteBox.innerHTML = `<span class="label">Anekdota</span>${anecdoteText}`;
+    anecdoteBox.style.display = 'block';
+  } else {
+    anecdoteBox.style.display = 'none';
+  }
+  puzzleArea.style.display = 'block';
+  setView('interactive');
+});
+
+function renderGrid(result) {
+  let minR = Infinity, maxR = -Infinity, minC = Infinity, maxC = -Infinity;
+  for (const k of result.grid.keys()) {
+    const [r, c] = k.split('_').map(Number);
+    minR = Math.min(minR, r); maxR = Math.max(maxR, r);
+    minC = Math.min(minC, c); maxC = Math.max(maxC, c);
+  }
+  currentBounds = { minR, maxR, minC, maxC };
+  const rows = maxR - minR + 1;
+  const cols = maxC - minC + 1;
+
+  gridEl.style.gridTemplateColumns = `repeat(${cols}, 42px)`;
+  gridEl.innerHTML = '';
+
+  for (let r = minR; r <= maxR; r++) {
+    for (let c = minC; c <= maxC; c++) {
+      const cell = result.grid.get(gkey(r, c));
+      const div = document.createElement('div');
+      if (!cell) {
+        div.className = 'cell empty';
+      } else if (cell.letter) {
+        div.className = 'cell letter' + (cell.solutionIndex ? ' solution' : '');
+        div.dataset.r = r; div.dataset.c = c; div.dataset.answer = cell.letter;
+        if (cell.solutionIndex) {
+          const badge = document.createElement('span');
+          badge.className = 'badge';
+          badge.textContent = cell.solutionIndex;
+          div.appendChild(badge);
+        }
+        const input = document.createElement('input');
+        input.maxLength = 1;
+        input.autocomplete = 'off';
+        input.addEventListener('input', onCellInput);
+        input.addEventListener('keydown', onCellKeydown);
+        div.appendChild(input);
+      } else {
+        div.className = 'cell clue';
+        if (cell.acrossClue) {
+          const p = document.createElement('div');
+          p.className = 'cl';
+          p.title = cell.acrossClue;
+          p.innerHTML = `<span class="arrow">→</span><span>${cell.acrossClue}</span>`;
+          div.appendChild(p);
+        }
+        if (cell.downClue) {
+          const p = document.createElement('div');
+          p.className = 'cl';
+          p.title = cell.downClue;
+          p.innerHTML = `<span class="arrow">↓</span><span>${cell.downClue}</span>`;
+          div.appendChild(p);
+        }
+      }
+      gridEl.appendChild(div);
+    }
+  }
+  updateSolutionBox();
+}
+
+function getCellDiv(r, c) {
+  return gridEl.querySelector(`.cell.letter[data-r="${r}"][data-c="${c}"]`);
+}
+
+function onCellInput(e) {
+  const div = e.target.closest('.cell');
+  const val = e.target.value.toUpperCase().slice(-1);
+  e.target.value = val;
+  div.classList.remove('correct', 'incorrect');
+  const r = parseInt(div.dataset.r), c = parseInt(div.dataset.c);
+  if (val) {
+    let next = getCellDiv(r, c + 1) || getCellDiv(r + 1, c);
+    if (next) next.querySelector('input').focus();
+  }
+  updateSolutionBox();
+}
+
+function onCellKeydown(e) {
+  const div = e.target.closest('.cell');
+  const r = parseInt(div.dataset.r), c = parseInt(div.dataset.c);
+  let target = null;
+  if (e.key === 'ArrowRight') target = getCellDiv(r, c + 1);
+  else if (e.key === 'ArrowLeft') target = getCellDiv(r, c - 1);
+  else if (e.key === 'ArrowDown') target = getCellDiv(r + 1, c);
+  else if (e.key === 'ArrowUp') target = getCellDiv(r - 1, c);
+  else if (e.key === 'Backspace' && !e.target.value) {
+    target = getCellDiv(r, c - 1) || getCellDiv(r - 1, c);
+  }
+  if (target) { e.preventDefault(); target.querySelector('input').focus(); }
+}
+
+function updateSolutionBox() {
+  if (!currentResult) return;
+  const solCells = [];
+  for (const div of gridEl.querySelectorAll('.cell.letter.solution')) {
+    const r = parseInt(div.dataset.r), c = parseInt(div.dataset.c);
+    const cellData = currentResult.grid.get(gkey(r, c));
+    const input = div.querySelector('input');
+    solCells.push({ idx: cellData.solutionIndex, val: input.value || '·' });
+  }
+  solCells.sort((a, b) => a.idx - b.idx);
+  const text = solCells.map(s => s.val).join(' ');
+  solutionBox.textContent = 'Megfejtés: ' + text;
+  const allFilled = solCells.every(s => s.val !== '·');
+  const correctPhrase = currentResult.letters.join('');
+  const currentPhrase = solCells.map(s => s.val).join('');
+  if (allFilled && currentPhrase === correctPhrase) {
+    solutionBox.classList.add('success');
+    solutionBox.textContent = 'Megfejtés: ' + solCells.map(s => s.val).join(' ') + ' ✓';
+  } else {
+    solutionBox.classList.remove('success');
+  }
+}
+
+document.getElementById('checkBtn').addEventListener('click', () => {
+  for (const div of gridEl.querySelectorAll('.cell.letter')) {
+    const input = div.querySelector('input');
+    div.classList.remove('correct', 'incorrect');
+    if (!input.value) continue;
+    if (input.value === div.dataset.answer) div.classList.add('correct');
+    else div.classList.add('incorrect');
+  }
+});
+
+document.getElementById('resetBtn').addEventListener('click', () => {
+  for (const div of gridEl.querySelectorAll('.cell.letter')) {
+    div.querySelector('input').value = '';
+    div.classList.remove('correct', 'incorrect');
+  }
+  updateSolutionBox();
+});
+
+// karikatúra: kép feltöltése
+document.getElementById('uploadImgBtn').addEventListener('click', () => {
+  document.getElementById('caricatureUpload').click();
+});
+document.getElementById('caricatureUpload').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    const img = document.getElementById('caricatureImg');
+    img.src = ev.target.result;
+    img.style.display = 'block';
+    document.getElementById('caricaturePlaceholder').style.display = 'none';
+    document.getElementById('bubble').style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+});
+document.getElementById('removeImgBtn').addEventListener('click', () => {
+  const img = document.getElementById('caricatureImg');
+  img.removeAttribute('src');
+  img.style.display = 'none';
+  document.getElementById('caricaturePlaceholder').style.display = 'block';
+  document.getElementById('bubble').style.display = 'none';
+  document.getElementById('caricatureUpload').value = '';
+});
+
+// karikatúra: szövegbuborék sarok-pozicionálása
+document.querySelectorAll('.corner-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.corner-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const bubble = document.getElementById('bubble');
+    bubble.classList.remove('corner-tl', 'corner-tr', 'corner-bl', 'corner-br');
+    bubble.classList.add('corner-' + btn.dataset.corner);
+  });
+});
+
+// nézetváltás
+function setView(mode) {
+  const interactiveBtn = document.getElementById('viewInteractiveBtn');
+  const printBtn = document.getElementById('viewPrintBtn');
+  const interactiveControls = document.getElementById('interactiveControls');
+  const printControls = document.getElementById('printControls');
+  if (mode === 'interactive') {
+    interactiveBtn.classList.add('active'); printBtn.classList.remove('active');
+    interactiveControls.style.display = 'block'; printControls.style.display = 'none';
+    gridEl.querySelectorAll('input').forEach(i => i.disabled = false);
+  } else {
+    interactiveBtn.classList.remove('active'); printBtn.classList.add('active');
+    interactiveControls.style.display = 'none'; printControls.style.display = 'block';
+  }
+}
+document.getElementById('viewInteractiveBtn').addEventListener('click', () => setView('interactive'));
+document.getElementById('viewPrintBtn').addEventListener('click', () => setView('print'));
+
+document.getElementById('printStudentBtn').addEventListener('click', () => {
+  gridEl.querySelectorAll('input').forEach(i => i.value = '');
+  const bubbleText = document.getElementById('bubbleText');
+  bubbleText.dataset.prev = bubbleText.value;
+  bubbleText.value = '';
+  document.body.classList.add('printing-student');
+  window.print();
+  document.body.classList.remove('printing-student');
+  bubbleText.value = bubbleText.dataset.prev || '';
+});
+document.getElementById('printTeacherBtn').addEventListener('click', () => {
+  gridEl.querySelectorAll('.cell.letter').forEach(div => {
+    div.querySelector('input').value = div.dataset.answer;
+  });
+  const bubbleText = document.getElementById('bubbleText');
+  const suggested = document.getElementById('bubbleSuggested').value;
+  bubbleText.dataset.prev = bubbleText.value;
+  if (suggested) bubbleText.value = suggested;
+  document.body.classList.add('printing-teacher');
+  window.print();
+  document.body.classList.remove('printing-teacher');
+  bubbleText.value = bubbleText.dataset.prev || '';
+});
+
+// mentés / beküldés
+function buildSummary() {
+  const name = document.getElementById('studentName').value || '(nincs megadva)';
+  const cls = document.getElementById('studentClass').value || '(nincs megadva)';
+  let correct = 0, total = 0;
+  gridEl.querySelectorAll('.cell.letter').forEach(div => {
+    total++;
+    if (div.querySelector('input').value === div.dataset.answer) correct++;
+  });
+  const pct = total ? Math.round((correct / total) * 100) : 0;
+  const solutionText = solutionBox.textContent;
+  const bubbleText = document.getElementById('bubbleText').value.trim();
+  const bubbleLine = bubbleText ? `\nSzövegbuborék válasza: ${bubbleText}` : '';
+  return `Anekdota-rejtvény — beküldött megoldás
+Diák: ${name}
+Osztály: ${cls}
+Helyes cellák aránya: ${correct}/${total} (${pct}%)
+${solutionText}${bubbleLine}
+`;
+}
+
+document.getElementById('submitBtn').addEventListener('click', () => {
+  const email = document.getElementById('teacherEmail').value || 'tanar@pelda.hu';
+  const name = document.getElementById('studentName').value || 'Diák';
+  const subject = encodeURIComponent(`Anekdota-rejtvény — ${name}`);
+  const body = encodeURIComponent(buildSummary());
+  window.location.href = `mailto:${email}?subject=${subject}&body=${body}`;
+});
+
+document.getElementById('downloadBtn').addEventListener('click', () => {
+  const text = buildSummary();
+  const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'anekdota-rejtveny-megoldas.txt';
+  a.click();
+  URL.revokeObjectURL(url);
+});
+</script>
+</body>
+</html>
