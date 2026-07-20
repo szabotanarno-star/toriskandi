@@ -1,0 +1,1106 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Anekdota-rejtvény készítő</title>
+<style>
+  :root {
+    --paper: #FFF8EC;
+    --paper-dark: #FFE8C7;
+    --ink: #2B3A55;
+    --ink-soft: #5E6E8C;
+    --accent: #FF6B4A;
+    --accent-soft: #FFE3D6;
+    --gold: #17A398;
+    --line: #F0C28A;
+    --good: #2FA84F;
+    --bad: #E14545;
+    --card: #FFFFFF;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 16px;
+    line-height: 1.5;
+  }
+  header {
+    background: var(--ink);
+    color: var(--paper);
+    padding: 28px 20px 22px;
+    text-align: center;
+    border-bottom: 6px double var(--gold);
+  }
+  header h1 {
+    margin: 0 0 6px;
+    font-family: Georgia, serif;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    font-size: clamp(24px, 4vw, 34px);
+  }
+  header p {
+    margin: 0;
+    color: var(--accent-soft);
+    font-style: italic;
+    font-size: 14px;
+  }
+  main {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 28px 20px 80px;
+  }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 22px;
+    margin-bottom: 24px;
+    box-shadow: 0 2px 0 var(--line);
+  }
+  .card h2 {
+    margin-top: 0;
+    font-size: 19px;
+    color: var(--accent);
+    border-bottom: 2px solid var(--accent-soft);
+    padding-bottom: 8px;
+  }
+  label {
+    display: block;
+    font-weight: 700;
+    margin: 14px 0 6px;
+    font-size: 14px;
+    color: var(--ink-soft);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  textarea, select, input[type=text] {
+    width: 100%;
+    font-family: Georgia, serif;
+    font-size: 16px;
+    padding: 10px 12px;
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    background: var(--paper);
+    color: var(--ink);
+  }
+  textarea { min-height: 70px; resize: vertical; }
+  .btn {
+    display: inline-block;
+    background: var(--accent);
+    color: var(--paper);
+    border: none;
+    padding: 11px 22px;
+    font-family: Georgia, serif;
+    font-size: 15px;
+    font-weight: 700;
+    border-radius: 3px;
+    cursor: pointer;
+    margin-top: 16px;
+    margin-right: 10px;
+    letter-spacing: 0.02em;
+  }
+  .btn:hover { background: #E85535; }
+  .btn.secondary {
+    background: transparent;
+    color: var(--accent);
+    border: 1.5px solid var(--accent);
+  }
+  .btn.secondary:hover { background: var(--accent-soft); }
+  .btn.gold { background: var(--gold); }
+  .btn.gold:hover { background: #128077; }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .status {
+    margin-top: 14px;
+    font-size: 14px;
+    color: var(--ink-soft);
+  }
+  .status.error { color: var(--bad); font-weight: 700; }
+  .status.ok { color: var(--good); font-weight: 700; }
+
+  .toggle-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 18px;
+    flex-wrap: wrap;
+  }
+  .toggle-row .btn.active { background: var(--ink); color: var(--paper); }
+
+  #puzzleArea { display: none; }
+
+  .grid-wrap {
+    overflow-x: auto;
+    padding: 10px 0 20px;
+  }
+  .xgrid {
+    display: inline-grid;
+    gap: 2px;
+    background: var(--line);
+    border: 2px solid var(--ink);
+    padding: 2px;
+  }
+  .cell {
+    width: 42px;
+    height: 42px;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+    background: var(--card);
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .cell.empty { background: var(--ink); }
+  .cell.letter input {
+    width: 100%;
+    height: 100%;
+    border: none;
+    background: transparent;
+    text-align: center;
+    font-family: Georgia, serif;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--ink);
+    text-transform: uppercase;
+  }
+  .cell.letter input:focus { outline: 2px solid var(--gold); background: #FFF3D0; }
+  .cell.letter.solution { background: var(--accent-soft); }
+  .cell.letter.solution input { color: var(--ink); font-weight: 700; }
+  .cell.letter .badge {
+    position: absolute;
+    top: 1px;
+    left: 2px;
+    font-size: 9px;
+    font-weight: 700;
+    color: var(--ink);
+  }
+  .cell.letter.correct input { color: var(--good); }
+  .cell.letter.correct { box-shadow: inset 0 0 0 2px var(--good); }
+  .cell.letter.incorrect { box-shadow: inset 0 0 0 2px var(--bad); }
+  .cell.clue {
+    background: var(--paper-dark);
+    font-size: 7px;
+    line-height: 1.1;
+    text-align: left;
+    padding: 2px 3px;
+    color: var(--ink-soft);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 1px;
+    min-width: 0;
+    min-height: 0;
+  }
+  .cell.clue .cl {
+    display: flex;
+    gap: 2px;
+    min-width: 0;
+    overflow: hidden;
+  }
+  .cell.clue .arrow { color: var(--accent); font-weight: 700; flex-shrink: 0; }
+  .cell.clue .cl span:last-child {
+    min-width: 0;
+    overflow: hidden;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    hyphens: auto;
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical;
+  }
+
+  .solution-box {
+    background: var(--ink);
+    color: var(--paper);
+    padding: 16px 20px;
+    border-radius: 4px;
+    margin-top: 16px;
+    font-size: 18px;
+    letter-spacing: 0.08em;
+    text-align: center;
+    font-weight: 700;
+  }
+  .solution-box.success { background: var(--good); }
+
+  .submit-form {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 10px;
+  }
+  @media (max-width: 600px) { .submit-form { grid-template-columns: 1fr; } }
+
+  .note {
+    font-size: 13px;
+    color: var(--ink-soft);
+    background: var(--paper-dark);
+    border-left: 3px solid var(--gold);
+    padding: 10px 14px;
+    margin-top: 14px;
+  }
+
+  .anecdote-box {
+    background: var(--paper-dark);
+    border-left: 4px solid var(--accent);
+    padding: 14px 18px;
+    margin-top: 18px;
+    font-style: italic;
+    font-size: 15px;
+    color: var(--ink);
+  }
+  .anecdote-box .label {
+    display: block;
+    font-style: normal;
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    color: var(--accent);
+    margin-bottom: 6px;
+  }
+  .caricature-card { margin-top: 18px; }
+  .caricature-wrap {
+    position: relative;
+    background: var(--paper-dark);
+    border: 2px dashed var(--line);
+    border-radius: 4px;
+    min-height: 220px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+  .caricature-placeholder {
+    color: var(--ink-soft);
+    font-style: italic;
+    font-size: 14px;
+    padding: 24px;
+    text-align: center;
+  }
+  .caricature-wrap img { max-width: 100%; max-height: 420px; display: block; }
+  .caricature-controls {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-top: 10px;
+  }
+  .corner-btns { display: flex; gap: 4px; margin-left: auto; }
+  .corner-btn {
+    padding: 7px 10px;
+    font-size: 12px;
+    border: 1px solid var(--line);
+    background: var(--card);
+    border-radius: 3px;
+    cursor: pointer;
+    color: var(--ink-soft);
+    font-family: Georgia, serif;
+  }
+  .corner-btn.active { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+  .bubble {
+    position: absolute;
+    width: 46%;
+    min-height: 70px;
+    max-height: 150px;
+    background: var(--card);
+    border: 2px solid var(--ink);
+    border-radius: 10px;
+    padding: 6px 8px;
+    box-sizing: border-box;
+  }
+  .bubble textarea {
+    width: 100%; height: 100%; min-height: 56px;
+    border: none; background: transparent; resize: none;
+    font-family: Georgia, serif; font-size: 13px; color: var(--ink);
+  }
+  .bubble.corner-tl { top: 10px; left: 10px; }
+  .bubble.corner-tr { top: 10px; right: 10px; }
+  .bubble.corner-bl { bottom: 10px; left: 10px; }
+  .bubble.corner-br { bottom: 10px; right: 10px; }
+  .bubble::after {
+    content: ''; position: absolute; width: 0; height: 0; border: 9px solid transparent;
+  }
+  .bubble.corner-tl::after { bottom: -16px; left: 20px; border-top-color: var(--ink); border-bottom: 0; }
+  .bubble.corner-tr::after { bottom: -16px; right: 20px; border-top-color: var(--ink); border-bottom: 0; }
+  .bubble.corner-bl::after { top: -16px; left: 20px; border-bottom-color: var(--ink); border-top: 0; }
+  .bubble.corner-br::after { top: -16px; right: 20px; border-bottom-color: var(--ink); border-top: 0; }
+
+  @media print {
+    header, .no-print { display: none !important; }
+    body { background: white; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .card { box-shadow: none; border: none; }
+    .xgrid { border: 2px solid black; }
+  }
+  .print-only { display: none; }
+  body.printing-student .interactive-only { display: none; }
+  body.printing-teacher .interactive-only { display: none; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Anekdota-rejtvény készítő</h1>
+  <p>Skandináv típusú keresztrejtvény történelmi anekdotákhoz — 1001 Történet</p>
+</header>
+
+<main>
+
+  <div class="card no-print" id="setupCard">
+    <h2>1. Add meg az anekdotát</h2>
+    <label for="anecdoteInput">Anekdota szövege (ez jelenik meg a feladatlapon, olvasmányként)</label>
+    <textarea id="anecdoteInput" style="min-height: 110px;">Amikor Széchenyi István 1825-ben felajánlotta egyévi jövedelmét egy magyar tudós társaság megalapítására, a pozsonyi orszá[...]
+
+    <label for="sentenceInput">Megoldás-mondat (ez lesz a rejtvény megfejtése — lehet az anekdota rövid összefoglalása vagy egy kulcsmondata)</label>
+    <textarea id="sentenceInput">Éljen a haza</textarea>
+
+    <label for="eraSelect">Korszak / témakör</label>
+    <select id="eraSelect"></select>
+
+    <div class="status" id="statusLine"></div>
+    <button class="btn" id="generateBtn">Rejtvény generálása</button>
+  </div>
+
+  <div id="puzzleArea">
+
+    <div class="card no-print">
+      <h2>2. Nézet</h2>
+      <div class="toggle-row">
+        <button class="btn active" id="viewInteractiveBtn">Kitöltős nézet</button>
+        <button class="btn secondary" id="viewPrintBtn">Nyomtatási nézet</button>
+      </div>
+
+      <div id="interactiveControls">
+        <button class="btn gold" id="checkBtn">Ellenőrzés</button>
+        <button class="btn secondary" id="resetBtn">Kitöltés törlése</button>
+      </div>
+
+      <div id="printControls" style="display:none;">
+        <button class="btn" id="printStudentBtn">Nyomtatás — üres feladatlap</button>
+        <button class="btn secondary" id="printTeacherBtn">Nyomtatás — megoldókulcs</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Rejtvény</h2>
+      <div class="grid-wrap">
+        <div class="xgrid" id="gridEl"></div>
+      </div>
+      <div class="solution-box" id="solutionBox">Megfejtés: —</div>
+      <div class="anecdote-box" id="anecdoteBox"></div>
+      <div class="caricature-card">
+        <div class="caricature-wrap" id="caricatureWrap">
+          <span class="caricature-placeholder" id="caricaturePlaceholder">Nincs feltöltött kép — kattints a "Kép feltöltése" gombra.</span>
+          <img id="caricatureImg" style="display:none;" alt="Karikatúra">
+          <div class="bubble corner-tr" id="bubble" style="display:none;">
+            <textarea id="bubbleText" placeholder="Ide írhatja a diák a saját szövegét…"></textarea>
+          </div>
+        </div>
+        <div class="caricature-controls no-print">
+          <input type="file" id="caricatureUpload" accept="image/*" style="display:none;">
+          <button class="btn secondary" id="uploadImgBtn" type="button">Kép feltöltése</button>
+          <button class="btn secondary" id="removeImgBtn" type="button">Kép törlése</button>
+          <div class="corner-btns">
+            <button class="corner-btn" data-corner="tl" type="button">Bal fent</button>
+            <button class="corner-btn active" data-corner="tr" type="button">Jobb fent</button>
+            <button class="corner-btn" data-corner="bl" type="button">Bal lent</button>
+            <button class="corner-btn" data-corner="br" type="button">Jobb lent</button>
+          </div>
+        </div>
+        <div class="no-print" style="margin-top:10px;">
+          <label for="bubbleSuggested">Javasolt válasz (csak a tanári nyomtatáshoz, opcionális)</label>
+          <input type="text" id="bubbleSuggested" placeholder="Pl. mit mondhatott a szereplő…">
+        </div>
+      </div>
+    </div>
+
+    <div class="card no-print interactive-only" id="submitCard">
+      <h2>3. Mentés és beküldés</h2>
+      <div class="submit-form">
+        <div>
+          <label for="studentName">Diák neve</label>
+          <input type="text" id="studentName" placeholder="Kovács Anna">
+        </div>
+        <div>
+          <label for="studentClass">Osztály</label>
+          <input type="text" id="studentClass" placeholder="10.B">
+        </div>
+      </div>
+      <label for="teacherEmail">Tanár e-mail címe</label>
+      <input type="text" id="teacherEmail" value="tanarno@pelda.hu">
+      <div class="note">Ha a "Beküldés" gombra kattintva nem nyílik meg a levelezőprogramod, használd a "Letöltés" gombot, és küldd el a fájlt csatolmányként.</div>
+      <button class="btn" id="submitBtn">Beküldés e-mailben</button>
+      <button class="btn secondary" id="downloadBtn">Letöltés fájlba</button>
+    </div>
+
+  </div>
+
+</main>
+
+<script>
+// ============================================================
+// 1) ADATOK — bővíthető szólisták
+// ============================================================
+const GENERAL_WORDS = [
+  ['ALMA','Gyümölcs'],
+  ['VIRÁG','Illatos kerti növény'],
+  ['ERDŐ','Fákkal borított terület'],
+  ['HÁZ','Lakóépület'],
+  ['KUTYA','"Ember legjobb barátja"'],
+  ['MACSKA','Dorombolós házi kedvenc'],
+  ['ASZTAL','Bútor, amin étkezünk'],
+  ['ABLAK','Nyílászáró a falban'],
+  ['KÖNYV','Lapokból álló olvasmány'],
+  ['ISKOLA','Tanulás helyszíne'],
+  ['TANÁR','Iskolában tanító személy'],
+  ['DIÁK','Iskolában tanuló személy'],
+  ['TOLL','Íróeszköz'],
+  ['NAP','Az ég ragyogó csillaga'],
+  ['HOLD','A Föld kísérője'],
+  ['VÍZ','Élet alapanyaga'],
+  ['KENYÉR','Alapélelmiszer'],
+  ['KERT','Ház körüli zöld terület'],
+  ['UTCA','Közlekedő út házak közt'],
+  ['VÁROS','Nagyobb település'],
+  ['FALU','Vidéki település'],
+  ['NÉP','Ország lakossága'],
+  ['KIRÁLY','Koronás uralkodó'],
+  ['VÁR','Erődített épület'],
+  ['TEMPLOM','Vallási épület'],
+  ['HARANG','Templomi hangadó eszköz'],
+  ['ZÁSZLÓ','Ország jelképe, lobogó'],
+  ['KARD','Régi idők fegyvere'],
+  ['LÓ','Patás háziállat'],
+  ['HÍD','Két partot összekötő építmény'],
+  ['FOLYÓ','Tengerbe ömlő víz'],
+  ['HEGY','Magas földfelszíni forma'],
+  ['TÓ','Állóvíz'],
+  ['TENGER','Nagy kiterjedésű sós víz'],
+  ['MADÁR','Repülni tudó állat'],
+  ['HAL','Vízben élő állat'],
+  ['FARKAS','Erdei ragadozó'],
+  ['RÓKA','Ravasz erdei állat'],
+  ['MEDVE','Nagytestű erdei ragadozó'],
+  ['SAS','Ragadozó madár'],
+  ['ZENE','Hangokból álló művészet'],
+  ['ÉJSZAKA','A nap sötét szaka'],
+  ['JÉG','Fagyott víz'],
+  ['JÁTÉK','Gyerekek időtöltése'],
+  ['ÉV','365 napos időszak'],
+  ['ÚT','Közlekedésre szolgáló nyomvonal'],
+  ['ÁG','Fa kinövése'],
+  ['TŰ','Varráshoz használt hegyes eszköz'],
+  ['ÖV','Derékra kötött ruhadarab'],
+  ['ING','Felsőtest fedő ruhadarab'],
+  ['ÉG','Felettünk húzódó kékség'],
+  ['ORR','Arcon lévő szaglószerv'],
+  ['FÜL','Halláshoz szükséges testrész'],
+  ['SZEM','Látáshoz szükséges testrész'],
+  ['SZÁJ','Beszédre és evésre szolgáló testrész'],
+  ['KÉZ','Fogásra használt testrész'],
+  ['LÁB','Járásra szolgáló testrész'],
+  ['FEJ','A test felső, legfontosabb része'],
+  ['HAJ','A fejet borító szálas képződmény'],
+  ['SZÍV','Vért pumpáló szerv'],
+  ['VÉR','Az erekben keringő folyadék'],
+  ['ARC','A fej elülső része'],
+  ['CSALÁD','Szülőkből és gyerekekből álló közösség'],
+  ['ANYA','Női szülő'],
+  ['APA','Férfi szülő'],
+  ['TESTVÉR','Közös szülőtől származó rokon'],
+  ['BARÁT','Közeli, megbízható ismerős'],
+  ['MUNKA','Kereset fejében végzett tevékenység'],
+  ['PÉNZ','Fizetőeszköz'],
+  ['ÉLET','Születéstől halálig tartó lét'],
+  ['ÁLOM','Alvás közbeni élmény'],
+  ['ÖRÖM','Kellemes érzés'],
+  ['REMÉNY','Bizakodó várakozás'],
+  ['SZÍN','Amit a szemünk érzékel'],
+  ['PIROS','A vér, a paradicsom színe'],
+  ['ZÖLD','A fű, a levelek színe'],
+  ['SÁRGA','A citrom, a nap színe'],
+  ['FEHÉR','A hó, a tej színe'],
+  ['FEKETE','A szén, az éjszaka színe'],
+  ['LEVES','Folyékony, meleg étel'],
+  ['HÚS','Állati eredetű élelmiszer'],
+  ['SAJT','Tejből készült élelmiszer'],
+  ['VAJ','Tejszínből köpült élelmiszer'],
+  ['TÉSZTA','Lisztből készült étel alapanyaga'],
+  ['GYÜMÖLCS','Növény édes termése'],
+  ['ZÖLDSÉG','Kerti, nem édes növényi élelmiszer'],
+  ['KRUMPLI','Föld alatt termő gumós zöldség'],
+  ['HAGYMA','Csípős illatú, rétegzett zöldség'],
+  ['CITROM','Savanyú sárga citrusgyümölcs'],
+  ['NARANCS','Édes-savanyú citrusgyümölcs'],
+  ['BANÁN','Sárga, hajlott trópusi gyümölcs'],
+  ['MÉZ','Méhek által készített édesség'],
+  ['OLLÓ','Vágásra szolgáló eszköz'],
+  ['KALAPÁCS','Szögek beveréséhez használt szerszám'],
+  ['SZÖG','Éles, hegyes rögzítőeszköz'],
+  ['ARANY','Értékes sárga nemesfém'],
+  ['EZÜST','Értékes fehér nemesfém'],
+  ['ÜVEG','Törékeny, átlátszó anyag'],
+  ['PAPÍR','Írásra használt anyag'],
+  ['RUHA','Testet fedő öltözék'],
+  ['CIPŐ','Lábbeli'],
+  ['KALAP','Fejfedő'],
+  ['IDŐ','Percekből, órákból álló fogalom'],
+  ['NŐ','Felnőtt női személy'],
+  ['ERŐS','Nagy fizikai erővel rendelkező'],
+  ['ELSŐ','A sorban legelső'],
+  ['TŰZ','Éget és világít'],
+  ['GYŰRŰ','Ujjra húzott ékszer'],
+  ['SZŰK','Nem tág, kicsi'],
+  ['KESZTYŰ','Kezet melegítő ruhadarab'],
+  ['ÚJ','Nem régi'],
+  ['KÚT','Vizet adó, földbe ásott nyílás'],
+  ['ÜNNEP','Különleges, ismétlődő esemény'],
+  ['TÜKÖR','Visszaveri a fényt'],
+  ['SÜT','Kenyeret, tésztát hővel készít'],
+  ['ÍZ','Amit a nyelvünk érzékel'],
+  ['ÍR','Betűket vet papírra'],
+  ['SÍ','Télisport-eszköz'],
+  ['SZÓ','Nyelvi egység, amiből mondat áll'],
+  ['FA','Törzsből, ágakból, levelekből álló növény'],
+  ['KŐ','Kemény ásványi anyag'],
+  ['LÉ','Gyümölcsből kifacsart folyadék'],
+  ['ÉN','Az alany, aki beszél'],
+  ['TE','A megszólított személy'],
+  ['MI','Kérdő vagy többes névmás'],
+  ['EZ','Közelre mutató névmás'],
+  ['AZ','Távolra mutató névmás'],
+  ['HA','Feltételt bevezető kötőszó'],
+  ['OK','Egy esemény kiváltó tényezője'],
+  ['ÚR','Megszólítás, tiszteletbeli cím'],
+  ['DE','Ellentétet kifejező kötőszó'],
+  ['BOR','Szőlőből készült szeszes ital'],
+  ['SÖR','Komlóból, malátából készült ital'],
+  ['TEA','Forró vízzel leforrázott ital'],
+  ['VAS','Kemény, mágneses fém'],
+  ['MAG','Növény szaporító egysége'],
+  ['LAP','Könyv vagy újság egy oldala'],
+  ['KOR','Egy adott történelmi időszak'],
+  ['HÓ','Télen hulló fehér csapadék'],
+  ['MEZŐ','Fátlan, füves terület'],
+  ['SZÉL','Mozgó levegő'],
+  ['NYÁR','Az év legmelegebb évszaka'],
+  ['TÉL','Az év leghidegebb évszaka'],
+  ['ŐSZ','Nyár utáni, lehulló levelű évszak'],
+  ['HÉT','Hét napból álló időszak'],
+  ['ÓRA','Az időt mérő eszköz'],
+  ['ESTE','A nap vége, sötétedés ideje'],
+  ['ESŐ','Az égből hulló csapadék'],
+  ['FELHŐ','Az égen úszó vízpára-alakzat'],
+  ['VIHAR','Erős széllel, esővel járó jelenség'],
+  ['AJTÓ','Bejáratot záró nyílászáró'],
+  ['SZOBA','Lakás egy helyisége'],
+  ['PADLÓ','A szoba alsó, járható felülete'],
+  ['CSÓK','Szeretet gyengéd kifejezése'],
+  ['TÁNC','Zenére végzett mozgásforma'],
+  ['DAL','Énekelt zenemű'],
+  ['MESE','Gyerekeknek szóló elbeszélés'],
+  ['VERS','Rímekbe szedett irodalmi mű'],
+  ['NAGY','Nem kicsi, terjedelmes'],
+  ['JÓ','Kedvező, pozitív tulajdonságú'],
+  ['ROSSZ','Nem jó, kedvezőtlen'],
+  ['SZÉP','Esztétikailag tetsző'],
+  ['RÉGI','Nem új, hosszú ideje létező'],
+  ['GYORS','Nagy sebességgel haladó'],
+  ['LASSÚ','Nem gyors'],
+  ['MAGAS','Nagy testmagasságú vagy kiterjedésű'],
+  ['EMBER','Homo sapiens, emberi lény'],
+  ['VILÁG','A Föld, vagy a mindenség'],
+  ['ORSZÁG','Önálló állami közösség'],
+  ['NYELV','Kommunikációs rendszer, vagy szánkban lévő szerv'],
+];
+
+// 3-4 betűs rácskitöltő rövidítések — NEM számítanak bele a tantervi arányba
+const ABBREVIATIONS = [
+  ['MTA','Magyar Tudományos Akadémia'],
+  ['TSZ','Termelőszövetkezet'],
+  ['KFT','Korlátolt felelősségű társaság'],
+  ['MÁV','Magyar Államvasutak'],
+  ['BKV','Budapesti Közlekedési Vállalat'],
+  ['MOL','Magyar Olaj- és Gázipari Rt.'],
+  ['OTP','Országos Takarékpénztár'],
+  ['MNB','Magyar Nemzeti Bank'],
+  ['ÁFA','Általános forgalmi adó'],
+  ['MDF','Magyar Demokrata Fórum'],
+  ['KISZ','Kommunista Ifjúsági Szövetség'],
+  ['ÁVH','Államvédelmi Hatóság'],
+  ['ENSZ','Egyesült Nemzetek Szervezete'],
+  ['NATO','Észak-atlanti Szerződés Szervezete'],
+  ['ELTE','Eötvös Loránd Tudományegyetem'],
+  ['BME','Budapesti Műszaki Egyetem'],
+];
+
+// A szólisták forrása: NAT-2020 kerettantervi fogalom- és adattár
+const CURRICULUM = {
+  okorigorog: {
+    label: 'Ókori Görögország',
+    words: [
+      ['POLISZ','Ókori görög városállam'],
+      ['DEMOKRÁCIA','Athéni államforma, "népuralom"'],
+      ['ARISZTOKRÁCIA','Előkelők uralma'],
+      ['NÉPGYŰLÉS','Athéni döntéshozó fórum'],
+      ['SZTRATÉGOSZ','Athéni hadvezéri tisztség'],
+      ['SPÁRTA','Katonai görög városállam'],
+      ['OLÜMPIA','Ókori sportjátékok színhelye'],
+      ['AKROPOLISZ','Athén szent várhegye'],
+      ['FILOZÓFIA','"A bölcsesség szeretete"'],
+      ['RABSZOLGA','Jogfosztott, tulajdonolt ember'],
+      ['PERIKLÉSZ','Athén vezető politikusa'],
+      ['NAGYSÁNDOR','Makedón hódító uralkodó'],
+      ['TRÓJA','Homérosz ostromlott városa'],
+    ]
+  },
+  reformkor: {
+    label: 'Reformkor (1830–1848)',
+    words: [
+      ['SZÉCHENYI','"Legnagyobb magyar"'],
+      ['KOSSUTH','Pesti Hírlap szerkesztője'],
+      ['DEÁK','"A haza bölcse"'],
+      ['HITEL','Széchenyi 1830-as könyve'],
+      ['LÁNCHÍD','Széchenyi budapesti hídja'],
+      ['HONVÉDSÉG','1848-as magyar hadsereg'],
+      ['GÖRGEI','Szabadságharc sikeres hadvezére'],
+    ]
+  }
+};
+
+// ============================================================
+// 2) RÁCSGENERÁLÓ MOTOR
+// ============================================================
+function normalizeSolution(sentence) {
+  return sentence.toUpperCase().replace(/[^A-ZÁÉÍÓÖŐÚÜŰ]/g, '').split('');
+}
+function gkey(r, c) { return r + '_' + c; }
+
+const ANECDOTE_STOPWORDS = new Set([
+  'A','AZ','ÉS','DE','HOGY','IS','NEM','MINT','HA','VAGY','AKKOR','MAJD','MEG','MÉG',
+  'CSAK','MÁR','ITT','OTT','EZT','AZT','NEKI','RÓLA','EGY','ENNEK','ANNAK','VOLT',
+  'LETT','LESZ','VAN','VANNAK','EZ','AKI','AMI','AHOL','AMIKOR','MERT','ÍGY','ÚGY',
+  'ILYEN','OLYAN','MINDEN','SOK','KEVÉS','NAGY','KIS','ŐT','ŐK','MI','TI','ÉN','TE'
+]);
+
+function cleanContextWord(t) {
+  return t.replace(/^[„"'\(\[]+/, '').replace(/[.,;:!?"'"\)\]]+$/, '');
+}
+
+function nearestContext(tokens, i, dir) {
+  let j = i + dir;
+  while (j >= 0 && j < tokens.length) {
+    const c = cleanContextWord(tokens[j]);
+    if (c) return c;
+    j += dir;
+  }
+  return '';
+}
+
+function extractAnecdoteWords(anecdoteText) {
+  if (!anecdoteText) return [];
+  const rawTokens = anecdoteText.split(/\s+/).filter(Boolean);
+  const cleanWord = (t) => t.toUpperCase().replace(/[^A-ZÁÉÍÓÖŐÚÜŰ]/g, '');
+  const seen = new Set();
+  const entries = [];
+  for (let i = 0; i < rawTokens.length; i++) {
+    const clean = cleanWord(rawTokens[i]);
+    if (clean.length < 3 || ANECDOTE_STOPWORDS.has(clean) || seen.has(clean)) continue;
+    seen.add(clean);
+    const prev = nearestContext(rawTokens, i, -1);
+    const next = nearestContext(rawTokens, i, 1);
+    let clue;
+    if (prev && next) clue = `${prev} ___ ${next}`;
+    else if (prev) clue = `${prev} ___`;
+    else if (next) clue = `___ ${next}`;
+    else continue;
+    entries.push({ word: clean, clue, priority: 10 });
+  }
+  return entries;
+}
+
+class CrosswordEngine {
+  constructor(wordPool) {
+    this.pool = wordPool.filter(w => /^[A-ZÁÉÍÓÖŐÚÜŰ]+$/.test(w.word));
+  }
+  generate(sentence, opts = {}) {
+    const maxAttempts = opts.maxAttempts || 60000;
+    const letters = normalizeSolution(sentence);
+    if (letters.length === 0) return { success: false, reason: 'Üres megoldás-mondat.' };
+    this.grid = new Map();
+    this.usedWords = new Set();
+    this.placedWords = [];
+    this.attempts = 0;
+    this.maxAttempts = maxAttempts;
+    const ok = this._solve(letters, 0);
+    if (!ok) return { success: false, reason: 'Nem sikerült érvényes rácsot találni. Próbálj rövidebb mondatot, vagy bővítsd a szókészletet.' };
+    this._fillExtraCrossings();
+    this._fillEmptyRegions();
+    return { success: true, grid: this.grid, placedWords: this.placedWords, letters };
+  }
+  _candidatesFor(letter) {
+    return this.pool.filter(w => !this.usedWords.has(w.word) && w.word.includes(letter))
+      .sort((a, b) => (b.priority || 0) - (a.priority || 0) || b.word.length - a.word.length);
+  }
+  _canPlace(word, dir, r, c) {
+    const n = word.length;
+    const before = dir === 'across' ? gkey(r, c - 1) : gkey(r - 1, c);
+    const after = dir === 'across' ? gkey(r, c + n) : gkey(r + n, c);
+    if (this.grid.has(before) && this.grid.get(before).letter) return false;
+    if (this.grid.has(after) && this.grid.get(after).letter) return false;
+    for (let i = 0; i < n; i++) {
+      const k = dir === 'across' ? gkey(r, c + i) : gkey(r + i, c);
+      if (this.grid.has(k)) {
+        const cell = this.grid.get(k);
+        if (cell.letter && cell.letter !== word[i]) return false;
+      }
+    }
+    return true;
+  }
+  _place(word, dir, r, c, clue, isSolution = false) {
+    for (let i = 0; i < word.length; i++) {
+      const k = dir === 'across' ? gkey(r, c + i) : gkey(r + i, c);
+      if (!this.grid.has(k)) {
+        this.grid.set(k, { letter: '', clues: { across: '', down: '' }, isSolution: false });
+      }
+      const cell = this.grid.get(k);
+      cell.letter = word[i];
+      if (isSolution) cell.isSolution = true;
+      if (dir === 'across') cell.clues.across = clue;
+      else cell.clues.down = clue;
+    }
+  }
+  _solve(letters, index) {
+    if (++this.attempts > this.maxAttempts) return false;
+    if (index === letters.length) return true;
+    const letter = letters[index];
+    const candidates = this._candidatesFor(letter);
+    for (const cand of candidates) {
+      const dirs = [index === 0 ? 'across' : Math.random() < 0.7 ? 'across' : 'down', 
+                    index === 0 ? 'down' : Math.random() < 0.3 ? 'across' : 'down'];
+      for (const dir of dirs) {
+        for (const idx of cand.word) {
+          if (idx === letter) {
+            const letterIdx = cand.word.indexOf(idx);
+            const [r, c] = [0, index * 1.5];
+            if (this._canPlace(cand.word, dir, Math.floor(r), Math.floor(c))) {
+              this._place(cand.word, dir, Math.floor(r), Math.floor(c), cand.clue || 'Rejtvény', index < letters.length);
+              this.usedWords.add(cand.word);
+              this.placedWords.push({ word: cand.word, clue: cand.clue || '' });
+              if (this._solve(letters, index + 1)) return true;
+              this.usedWords.delete(cand.word);
+              this.placedWords.pop();
+              this._unplace(cand.word, dir, Math.floor(r), Math.floor(c));
+            }
+          }
+        }
+      }
+    }
+    return false;
+  }
+  _unplace(word, dir, r, c) {
+    for (let i = 0; i < word.length; i++) {
+      const k = dir === 'across' ? gkey(r, c + i) : gkey(r + i, c);
+      if (this.grid.has(k)) {
+        const cell = this.grid.get(k);
+        cell.letter = '';
+        if (dir === 'across') cell.clues.across = '';
+        else cell.clues.down = '';
+      }
+    }
+  }
+  _fillExtraCrossings() {
+    for (const [key, cell] of this.grid) {
+      if (!cell.letter && cell.clues.across) {
+        const candidates = this.pool.filter(w => !this.usedWords.has(w.word));
+        if (candidates.length > 0) {
+          const word = candidates[Math.floor(Math.random() * candidates.length)].word;
+          cell.letter = word[0];
+          this.usedWords.add(word);
+        }
+      }
+    }
+  }
+  _fillEmptyRegions() {
+    const fillRatio = 0.85; // 85% kitöltöttség
+    const emptyCells = Array.from(this.grid.entries())
+      .filter(([, cell]) => !cell.letter)
+      .map(([key]) => key);
+    
+    const targetEmpty = Math.ceil(this.grid.size * (1 - fillRatio));
+    const toFill = emptyCells.slice(0, emptyCells.length - targetEmpty);
+    
+    for (const key of toFill) {
+      const cell = this.grid.get(key);
+      const candidates = this.pool.filter(w => !this.usedWords.has(w.word));
+      if (candidates.length > 0) {
+        const word = candidates[Math.floor(Math.random() * candidates.length)].word;
+        cell.letter = word[Math.floor(Math.random() * word.length)];
+        this.usedWords.add(word);
+      } else {
+        cell.letter = String.fromCharCode(65 + Math.floor(Math.random() * 26));
+      }
+    }
+  }
+}
+
+// ============================================================
+// 3) DOM KEZELÉS ÉS INTERAKTIVITÁS
+// ============================================================
+let currentState = {};
+
+function initializeApp() {
+  const eraSelect = document.getElementById('eraSelect');
+  for (const [key, era] of Object.entries(CURRICULUM)) {
+    const opt = document.createElement('option');
+    opt.value = key;
+    opt.textContent = era.label;
+    eraSelect.appendChild(opt);
+  }
+  document.getElementById('generateBtn').addEventListener('click', generatePuzzle);
+  document.getElementById('viewInteractiveBtn').addEventListener('click', () => showView('interactive'));
+  document.getElementById('viewPrintBtn').addEventListener('click', () => showView('print'));
+  document.getElementById('checkBtn').addEventListener('click', checkAnswers);
+  document.getElementById('resetBtn').addEventListener('click', resetPuzzle);
+  document.getElementById('printStudentBtn').addEventListener('click', () => printPuzzle('student'));
+  document.getElementById('printTeacherBtn').addEventListener('click', () => printPuzzle('teacher'));
+  document.getElementById('uploadImgBtn').addEventListener('click', () => document.getElementById('caricatureUpload').click());
+  document.getElementById('caricatureUpload').addEventListener('change', uploadCaricature);
+  document.getElementById('removeImgBtn').addEventListener('click', removeCaricature);
+  document.querySelectorAll('.corner-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => moveBubble(e.target.dataset.corner));
+  });
+  document.getElementById('submitBtn').addEventListener('click', submitForm);
+  document.getElementById('downloadBtn').addEventListener('click', downloadForm);
+}
+
+function generatePuzzle() {
+  const anecdote = document.getElementById('anecdoteInput').value;
+  const sentence = document.getElementById('sentenceInput').value;
+  const eraKey = document.getElementById('eraSelect').value;
+  const statusEl = document.getElementById('statusLine');
+  
+  statusEl.textContent = 'Generálás folyamatban...';
+  statusEl.className = '';
+  
+  if (!sentence.trim()) {
+    statusEl.textContent = '❌ Kérlek, add meg a megoldás-mondatot!';
+    statusEl.className = 'error';
+    return;
+  }
+  
+  const wordPool = [
+    ...GENERAL_WORDS,
+    ...ABBREVIATIONS,
+    ...(CURRICULUM[eraKey]?.words || []),
+    ...extractAnecdoteWords(anecdote)
+  ];
+  
+  const engine = new CrosswordEngine(wordPool);
+  const result = engine.generate(sentence);
+  
+  if (!result.success) {
+    statusEl.textContent = '❌ ' + result.reason;
+    statusEl.className = 'error';
+    return;
+  }
+  
+  currentState = {
+    grid: result.grid,
+    letters: result.letters,
+    placedWords: result.placedWords,
+    anecdote: anecdote,
+    sentence: sentence
+  };
+  
+  renderPuzzle();
+  document.getElementById('puzzleArea').style.display = 'block';
+  document.getElementById('anecdoteBox').innerHTML = `<span class="label">Olvasmány:</span>${anecdote}`;
+  statusEl.textContent = '✓ Rejtvény sikeresen generálva!';
+  statusEl.className = 'ok';
+}
+
+function renderPuzzle() {
+  const gridEl = document.getElementById('gridEl');
+  gridEl.innerHTML = '';
+  
+  if (!currentState.grid || currentState.grid.size === 0) return;
+  
+  let minR = Infinity, maxR = -Infinity, minC = Infinity, maxC = -Infinity;
+  for (const key of currentState.grid.keys()) {
+    const [r, c] = key.split('_').map(Number);
+    minR = Math.min(minR, r); maxR = Math.max(maxR, r);
+    minC = Math.min(minC, c); maxC = Math.max(maxC, c);
+  }
+  
+  const rows = maxR - minR + 1, cols = maxC - minC + 1;
+  gridEl.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+  
+  for (let r = minR; r <= maxR; r++) {
+    for (let c = minC; c <= maxC; c++) {
+      const key = gkey(r, c);
+      const cell = currentState.grid.get(key);
+      const div = document.createElement('div');
+      div.className = 'cell';
+      
+      if (!cell) {
+        div.className += ' empty';
+      } else {
+        div.className += ' letter';
+        if (cell.isSolution) div.classList.add('solution');
+        
+        const inp = document.createElement('input');
+        inp.type = 'text';
+        inp.maxLength = 1;
+        inp.value = '';
+        inp.dataset.row = r;
+        inp.dataset.col = c;
+        inp.addEventListener('input', (e) => {
+          e.target.value = e.target.value.toUpperCase().replace(/[^A-ZÁÉÍÓÖŐÚÜŰ]/g, '');
+        });
+        div.appendChild(inp);
+        
+        if (cell.clues.across || cell.clues.down) {
+          const clueDiv = document.createElement('div');
+          clueDiv.className = 'clue';
+          if (cell.clues.across) {
+            const cl = document.createElement('div');
+            cl.className = 'cl';
+            cl.innerHTML = `<span class="arrow">➜</span><span>${cell.clues.across.substring(0, 20)}</span>`;
+            clueDiv.appendChild(cl);
+          }
+          if (cell.clues.down) {
+            const cl = document.createElement('div');
+            cl.className = 'cl';
+            cl.innerHTML = `<span class="arrow">⬇</span><span>${cell.clues.down.substring(0, 20)}</span>`;
+            clueDiv.appendChild(cl);
+          }
+          div.appendChild(clueDiv);
+        }
+      }
+      gridEl.appendChild(div);
+    }
+  }
+}
+
+function showView(view) {
+  document.getElementById('interactiveControls').style.display = view === 'interactive' ? 'block' : 'none';
+  document.getElementById('printControls').style.display = view === 'print' ? 'block' : 'none';
+  document.getElementById('viewInteractiveBtn').classList.toggle('active', view === 'interactive');
+  document.getElementById('viewPrintBtn').classList.toggle('active', view === 'print');
+}
+
+function checkAnswers() {
+  const inputs = document.querySelectorAll('.cell.letter input');
+  let correct = 0, total = 0;
+  
+  inputs.forEach(inp => {
+    const key = gkey(parseInt(inp.dataset.row), parseInt(inp.dataset.col));
+    const cell = currentState.grid.get(key);
+    if (cell && cell.letter) {
+      total++;
+      if (inp.value.toUpperCase() === cell.letter) {
+        inp.parentElement.classList.add('correct');
+        inp.parentElement.classList.remove('incorrect');
+        correct++;
+      } else {
+        inp.parentElement.classList.add('incorrect');
+        inp.parentElement.classList.remove('correct');
+      }
+    }
+  });
+  
+  const solutionBox = document.getElementById('solutionBox');
+  if (correct === total && total > 0) {
+    solutionBox.textContent = `🎉 Helyes! ${correct}/${total}`;
+    solutionBox.classList.add('success');
+  } else {
+    solutionBox.textContent = `${correct}/${total} helyes`;
+    solutionBox.classList.remove('success');
+  }
+}
+
+function resetPuzzle() {
+  document.querySelectorAll('.cell.letter input').forEach(inp => {
+    inp.value = '';
+    inp.parentElement.classList.remove('correct', 'incorrect');
+  });
+  document.getElementById('solutionBox').textContent = 'Megfejtés: —';
+  document.getElementById('solutionBox').classList.remove('success');
+}
+
+function printPuzzle(type) {
+  if (type === 'student') {
+    document.body.classList.add('printing-student');
+  } else {
+    document.body.classList.add('printing-teacher');
+    document.querySelectorAll('.cell.letter input').forEach(inp => {
+      inp.value = inp.parentElement.parentElement.querySelector('.cell.letter')?.dataset.letter || '';
+    });
+  }
+  window.print();
+  document.body.classList.remove('printing-student', 'printing-teacher');
+}
+
+function uploadCaricature(e) {
+  const file = e.target.files[0];
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const img = document.getElementById('caricatureImg');
+      img.src = ev.target.result;
+      img.style.display = 'block';
+      document.getElementById('caricaturePlaceholder').style.display = 'none';
+      document.getElementById('bubble').style.display = 'block';
+    };
+    reader.readAsDataURL(file);
+  }
+}
+
+function removeCaricature() {
+  document.getElementById('caricatureImg').style.display = 'none';
+  document.getElementById('caricaturePlaceholder').style.display = 'block';
+  document.getElementById('bubble').style.display = 'none';
+}
+
+function moveBubble(corner) {
+  const bubble = document.getElementById('bubble');
+  bubble.className = 'bubble corner-' + corner;
+  document.querySelectorAll('.corner-btn').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+}
+
+function submitForm() {
+  const name = document.getElementById('studentName').value;
+  const cls = document.getElementById('studentClass').value;
+  const email = document.getElementById('teacherEmail').value;
+  
+  if (!name || !cls || !email) {
+    alert('Kérlek, töltsd ki az összes mezőt!');
+    return;
+  }
+  
+  const mailtoLink = `mailto:${email}?subject=Rejtvény - ${name} (${cls})&body=Csatolt rejtvény.`;
+  window.location.href = mailtoLink;
+}
+
+function downloadForm() {
+  const content = document.documentElement.outerHTML;
+  const blob = new Blob([content], { type: 'text/html' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `rejtveny_${document.getElementById('studentName').value || 'megoldas'}.html`;
+  a.click();
+}
+
+// Alkalmazás inicializálása
+initializeApp();
+</script>
+
+</body>
+</html>
